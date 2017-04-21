@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
 
 	int ret;
 	ssize_t ev_ret;
-	ixev_ctx *ctx;
+	struct ixev_ctx *ctx;
 	ctx = malloc(sizeof(struct ixev_ctx));
 
 	//Call ixev_init
@@ -71,11 +71,11 @@ int main(int argc, char *argv[]){
 	char* buf = malloc(10); //TODO: how to know how big a buffer to allow for gets..?
 
 	// since these are dummy calls, for now don't need callbacks/handlers
-	ev_ret = ixev_put(ctx, key, val, len);
+	ixev_put(ctx, key, val, len);
 	ev_ret = ixev_get(ctx, key, buf);
 
 	//TODO: test delete...?
-	ev_ret = ixev_delete(ctx, key);
+	ixev_delete(ctx, key);
 
 	/*
 	while(1)
@@ -83,5 +83,6 @@ int main(int argc, char *argv[]){
 	*/
 
 	free(buf);
+	free(ctx);
 
 }

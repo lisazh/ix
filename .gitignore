@@ -11,6 +11,7 @@
 /dp/ix
 /apps/echoclient
 /apps/echoserver
+/apps/ioapp
 
 .DS_Store
 */.DS_Store

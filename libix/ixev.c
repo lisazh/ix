@@ -667,3 +667,7 @@ void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
 	printf("PUT CALLED");
 }
 
+void ixev_delete(struct ixev_ctx *ctx, char *key){
+  
+}
+
