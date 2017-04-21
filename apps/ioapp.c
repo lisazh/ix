@@ -16,9 +16,11 @@
 
 #include <ixev.h>
 
+/*
 struct io_conn {
 	struct ixev_ctx ctx
 };
+*/
 
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
@@ -33,8 +35,8 @@ static void io_dummydialed(struct ixev_ctx *ctx, long ret) { }
 struct ixev_conn_ops io_ops = {
 	.accept = &io_dummyaccept,
 	.release = &io_dummyrelease, 
-	.dialed = &io_dummydialed
-}
+	.dialed = &io_dummydialed,
+};
 
 // TODO for later testing for kernel side event-firing..
 static void get_handler(struct ixev_ctx *ctx, int reason){
@@ -49,7 +51,8 @@ int main(int argc, char *argv[]){
 
 	int ret;
 	ssize_t ev_ret;
-	ixev_ctx *ctx = malloc(sizeof(struct ixev_ctx));
+	ixev_ctx *ctx;
+	ctx = malloc(sizeof(struct ixev_ctx));
 
 	//Call ixev_init
 	ixev_init(&io_ops);
@@ -61,8 +64,8 @@ int main(int argc, char *argv[]){
 		exit(ret);
 	}
 
-	char[] key = "testkey";
-	char[] val = "test_value";
+	char key[] = "testkey";
+	char val[] = "test_value";
 	size_t len = strlen(val);
 
 	char* buf = malloc(10); //TODO: how to know how big a buffer to allow for gets..?
