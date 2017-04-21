@@ -656,14 +656,14 @@ int ixev_init(struct ixev_conn_ops *ops)
  *
  */
 
-ssize_t ixev_get(struct ixev_ctx *ctx, void *key, void *addr){
+ssize_t ixev_get(struct ixev_ctx *ctx, char *key, void *addr){
 	printf("GET CALLED");
 	return 0; //dummy for compilation
 }
 
 
 
-void ixev_put(struct ixev_ctx *ctx, void *key, void *val, size_t len){
+void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
 	printf("PUT CALLED");
 }
 
