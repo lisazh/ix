@@ -50,6 +50,8 @@ struct ixev_buf;
 #define IXEVIN		0x2 /* new data is available for reading */
 #define IXEVOUT		0x4 /* more space is available for writing */
 
+//LTODO: new event types for I/O? or do we use the same ones...
+
 struct ixev_conn_ops {
 	struct ixev_ctx *(*accept)(struct ip_tuple *id);
 	void (*release)(struct ixev_ctx *ctx);
@@ -111,6 +113,7 @@ static inline void ixev_check_hacks(struct ixev_ctx *ctx)
 	}
 }
 
+//why externs?
 extern ssize_t ixev_recv(struct ixev_ctx *ctx, void *addr, size_t len);
 extern void *ixev_recv_zc(struct ixev_ctx *ctx, size_t len);
 extern ssize_t ixev_send(struct ixev_ctx *ctx, void *addr, size_t len);
@@ -118,6 +121,16 @@ extern ssize_t ixev_send_zc(struct ixev_ctx *ctx, void *addr, size_t len);
 extern void ixev_add_sent_cb(struct ixev_ctx *ctx, struct ixev_ref *ref);
 
 extern void ixev_close(struct ixev_ctx *ctx);
+
+/* NEW 
+ * Interfaces for storage extension
+ * Types for keys void* for now
+ * Assume (all) memory allocation responsibility goes to app
+ * LTODO: global def for keylen? or pass in as parameter..
+ */
+extern ssize_t ixev_get(struct ixev_ctx *ctx, char *key, void *addr);
+extern void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len);
+extern void ixev_delete(struct ixev_ctx *ctx, char *key);
 
 /**
  * ixev_dial - open a connection

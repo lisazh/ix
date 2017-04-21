@@ -206,6 +206,7 @@ static struct ix_ops ixev_ops = {
 	.tcp_sent	= ixev_tcp_sent,
 	.timer_event	= ixev_timer_event,
 };
+//LTODO: add I/O functions to this struct 
 
 /**
  * ixev_recv - read data with copying
@@ -646,5 +647,23 @@ int ixev_init(struct ixev_conn_ops *ops)
 
 	ixev_global_ops = *ops;
 	return 0;
+}
+
+
+/*
+ * NEW: functions for I/O
+ * LTODO: may need move this to own file eventually? 
+ *
+ */
+
+ssize_t ixev_get(struct ixev_ctx *ctx, void *key, void *addr){
+	printf("GET CALLED");
+	return 0; //dummy for compilation
+}
+
+
+
+void ixev_put(struct ixev_ctx *ctx, void *key, void *val, size_t len){
+	printf("PUT CALLED");
 }
 

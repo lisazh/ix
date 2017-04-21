@@ -41,6 +41,7 @@ struct ix_ops {
 			 size_t win_size);
 	void (*tcp_dead)(hid_t handle, unsigned long cookie);
 	void (*timer_event)(unsigned long cookie);
+	//LTODO: add IO ops/events
 };
 
 extern void ix_flush(void);

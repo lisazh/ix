@@ -159,6 +159,7 @@ static inline struct bsys_desc *bsys_arr_next(struct bsys_arr *a)
 
 /*
  * Commands that can be sent from the user-level application to the kernel.
+ * LTODO: ADD IO COMMANDS
  */
 
 enum {
@@ -313,6 +314,7 @@ ksys_tcp_close(struct bsys_desc *d, hid_t handle)
 
 /*
  * Commands that can be sent from the kernel to the user-level application.
+ * LTODO: ADD I/O EVENTS 
  */
 
 enum {
