@@ -660,7 +660,6 @@ int ixev_init(struct ixev_conn_ops *ops)
  */
 
 ssize_t ixev_get(struct ixev_ctx *ctx, char *key, void *addr){
-
 	if (!ctx->read_desc) { //LTODO: for now skip "generation" check...
 		ctx->read_desc = __bsys_arr_next(karr);
 		ixev_check_hacks(ctx);
@@ -672,7 +671,6 @@ ssize_t ixev_get(struct ixev_ctx *ctx, char *key, void *addr){
 
 
 void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
-
 	if (!ctx->write_desc) { //LTODO: for now skip "generation" check...
 		ctx->write_desc = __bsys_arr_next(karr);
 		ixev_check_hacks(ctx);
