@@ -471,6 +471,9 @@ void ixev_ctx_init(struct ixev_ctx *ctx)
 	ctx->sent_total = 0;
 	ctx->ref_head = NULL;
 	ctx->cur_buf = NULL;
+
+	ctx->read_desc = NULL;
+	ctx->write_desc = NULL;
 }
 
 static void ixev_bad_ret(struct ixev_ctx *ctx, uint64_t sysnr, long ret)
@@ -657,14 +660,25 @@ int ixev_init(struct ixev_conn_ops *ops)
  */
 
 ssize_t ixev_get(struct ixev_ctx *ctx, char *key, void *addr){
-	printf("GET CALLED");
+
+	if (!ctx->read_desc) { //LTODO: for now skip "generation" check...
+		ctx->read_desc = __bsys_arr_next(karr);
+		ixev_check_hacks(ctx);
+		ksys_io_read(ctx->read_desc, key); //LTODO: fix params
+	}
 	return 0; //dummy for compilation
 }
 
 
 
 void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
-	printf("PUT CALLED");
+
+	if (!ctx->write_desc) { //LTODO: for now skip "generation" check...
+		ctx->write_desc = __bsys_arr_next(karr);
+		ixev_check_hacks(ctx);
+		ksys_io_write(ctx->write_desc, key, val, len); //LTODO: fix params
+	}
+	return 0; //dummy for compilation
 }
 
 void ixev_delete(struct ixev_ctx *ctx, char *key){

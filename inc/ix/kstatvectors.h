@@ -61,5 +61,7 @@ DEF_KSTATS(bsys_tcp_sendv);
 DEF_KSTATS(bsys_udp_recv_done);
 DEF_KSTATS(bsys_udp_send);
 DEF_KSTATS(bsys_udp_sendv);
+DEF_KSTATS(bsys_io_read);
+DEF_KSTATS(bsys_io_write);
 
 DEF_KSTATS(posix_syscall);

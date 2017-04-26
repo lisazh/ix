@@ -159,7 +159,6 @@ static inline struct bsys_desc *bsys_arr_next(struct bsys_arr *a)
 
 /*
  * Commands that can be sent from the user-level application to the kernel.
- * LTODO: ADD IO COMMANDS
  */
 
 enum {
@@ -173,8 +172,28 @@ enum {
 	KSYS_TCP_SENDV,
 	KSYS_TCP_RECV_DONE,
 	KSYS_TCP_CLOSE,
+	KSYS_IO_READ,
+	KSYS_IO_WRITE,
 	KSYS_NR,
 };
+
+
+/**
+ *  ksys_io_read - dummy for now
+ *
+ */
+static inline void ksys_io_read(struct bsys_desc *d, char *key){
+	BSYS_DESC_1ARG(d, KSYS_IO_READ, key);
+}
+
+
+/**
+ *  ksys_io_write - dummy for now
+ *
+ */
+static inline void ksys_io_write(struct bsys_desc *d, char *key, void *val, size_t len){
+	BSYS_DESC_3ARG(d, KSYS_IO_WRITE, key, val, len);
+}
 
 /**
  * ksys_udp_send - transmits a UDP packet
@@ -487,6 +506,9 @@ extern ssize_t bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 			      unsigned int nrents);
 extern long bsys_tcp_recv_done(hid_t handle, size_t len);
 extern long bsys_tcp_close(hid_t handle);
+
+extern ssize_t bsys_io_read(char *key);
+extern ssize_t bsys_io_write(char *key, void *val, size_t len);
 
 struct dune_tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);

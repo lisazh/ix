@@ -95,6 +95,10 @@ struct ixev_ctx {
 	struct bsys_desc *recv_done_desc;	/* the current recv_done bsys descriptor */
 	struct bsys_desc *sendv_desc;		/* the current sendv bsys descriptor */
 
+	struct bsys_desc *read_desc;		/* bsys descriptor for IO */ 
+	struct bsys_desc *write_desc; 		/* bsys descriptor for IO */ 
+
+
 	struct sg_entry	recv[IXEV_RECV_DEPTH];	/* receieve SG array */
 	struct sg_entry send[IXEV_SEND_DEPTH];	/* send SG array */
 };
