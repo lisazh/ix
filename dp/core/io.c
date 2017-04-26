@@ -12,6 +12,7 @@
 #include <ix/kstats.h>
 #include <ix/cfg.h>
 
+#include <stdio.h>
 
 
 
