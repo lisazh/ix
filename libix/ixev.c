@@ -664,6 +664,7 @@ ssize_t ixev_get(struct ixev_ctx *ctx, char *key, void *addr){
 		ctx->read_desc = __bsys_arr_next(karr);
 		ixev_check_hacks(ctx);
 		ksys_io_read(ctx->read_desc, key); //LTODO: fix params
+		printf("DEBUG: get called\n");
 	}
 	return 0; //dummy for compilation
 }
@@ -675,6 +676,8 @@ void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
 		ctx->write_desc = __bsys_arr_next(karr);
 		ixev_check_hacks(ctx);
 		ksys_io_write(ctx->write_desc, key, val, len); //LTODO: fix params
+		printf("DEBUG: put called\n");
+
 	}
 }
 

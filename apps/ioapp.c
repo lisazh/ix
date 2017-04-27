@@ -75,12 +75,11 @@ int main(int argc, char *argv[]){
 	ev_ret = ixev_get(ctx, key, buf);
 
 	//TODO: test delete...?
-	ixev_delete(ctx, key);
+	//ixev_delete(ctx, key);
 
-	/*
-	while(1)
-		ix_wait(0);
-	*/
+
+	//while(1)
+	ix_wait(0);
 
 	free(buf);
 	free(ctx);
