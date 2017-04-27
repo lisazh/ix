@@ -676,7 +676,6 @@ void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
 		ixev_check_hacks(ctx);
 		ksys_io_write(ctx->write_desc, key, val, len); //LTODO: fix params
 	}
-	return 0; //dummy for compilation
 }
 
 void ixev_delete(struct ixev_ctx *ctx, char *key){

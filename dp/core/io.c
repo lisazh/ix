@@ -17,11 +17,13 @@
 
 
 ssize_t bsys_io_read(char *key){
+	KSTATS_VECTOR(bsys_io_read);
 	printf("READ CALLED\n");
 	return 0;
 
 }
 ssize_t bsys_io_write(char *key, void *val, size_t len){
+	KSTATS_VECTOR(bsys_io_write);
 	printf("WRITE CALLED\n");
 	return 0;
 
