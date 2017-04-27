@@ -79,7 +79,7 @@ int main(int argc, char *argv[]){
 
 
 	//while(1)
-	ix_wait(0);
+	ixev_wait();
 
 	free(buf);
 	free(ctx);
