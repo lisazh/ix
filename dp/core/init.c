@@ -73,7 +73,7 @@ extern int cp_init(void);
 extern int mempool_init(void);
 extern int init_migration_cpu(void);
 extern int dpdk_init(void);
-
+extern int dummy_dev_init(void);
 
 struct init_vector_t {
 	const char *name;
@@ -103,6 +103,7 @@ static struct init_vector_t init_tbl[] = {
 	{ "kstats",  NULL,         kstats_init_cpu, NULL},    // after timer
 #endif
 	{ "init-net", NULL,         init_network_cpu, NULL},  // FIXME should be split
+	{ "dummy_dev", NULL, dummy_dev_init, NULL},
 	{ NULL, NULL, NULL, NULL}
 };
 
