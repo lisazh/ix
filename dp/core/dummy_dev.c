@@ -43,6 +43,7 @@ struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count)
 
 void dummy_dev_read_done(void *data)
 {
+	printf("Freeing mbuf\n");
 	struct mbuf *b = (struct mbuf *)((uintptr_t) data - MBUF_HEADER_LEN);
 	mbuf_free(b);
 }

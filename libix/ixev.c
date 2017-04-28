@@ -198,9 +198,14 @@ static void ixev_timer_event(unsigned long cookie)
 	t->handler(t->arg);
 }
 
+void ixev_get_done(void *addr);
+
 static void ixev_io_read(char *key, void *data, size_t len)
 {
 	printf("ixev_io_read: key=%s,  bytes=%lu val=%s\n", key, len, (char *)data);
+
+	//Remove this from here. Move it in the app
+	ixev_get_done(data);
 }
 
 
@@ -671,29 +676,33 @@ int ixev_init(struct ixev_conn_ops *ops)
  *
  */
 
-ssize_t ixev_get(struct ixev_ctx *ctx, char *key, void *addr){
-	if (!ctx->read_desc) { //LTODO: for now skip "generation" check...
-		ctx->read_desc = __bsys_arr_next(karr);
-		ixev_check_hacks(ctx);
-		ksys_io_read(ctx->read_desc, key); //LTODO: fix params
-		printf("DEBUG: get called\n");
-	}
-	return 0; //dummy for compilation
+void ixev_get(struct ixev_ctx *ctx, char *key)
+{
+	struct bsys_desc *karr_desc;
+
+	karr_desc = __bsys_arr_next(karr);
+	ksys_io_read(karr_desc, key); //LTODO: fix params
+	printf("DEBUG: get called\n");
 }
 
 
 
 void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
-	if (!ctx->write_desc) { //LTODO: for now skip "generation" check...
-		ctx->write_desc = __bsys_arr_next(karr);
-		ixev_check_hacks(ctx);
-		ksys_io_write(ctx->write_desc, key, val, len); //LTODO: fix params
-		printf("DEBUG: put called\n");
+	struct bsys_desc *karr_desc;
 
-	}
+	karr_desc = __bsys_arr_next(karr);
+	ksys_io_write(karr_desc, key, val, len); //LTODO: fix params
+	printf("DEBUG: put called\n");
 }
 
 void ixev_delete(struct ixev_ctx *ctx, char *key){
   
 }
 
+void ixev_get_done(void *addr)
+{
+	struct bsys_desc *karr_desc;
+
+	karr_desc = __bsys_arr_next(karr);
+	ksys_io_read_done(karr_desc, addr);
+}

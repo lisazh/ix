@@ -70,6 +70,7 @@ static bsysfn_t bsys_tbl[] = {
 	(bsysfn_t) bsys_tcp_close,
 	(bsysfn_t) bsys_io_read,
 	(bsysfn_t) bsys_io_write,
+	(bsysfn_t) bsys_io_read_done,
 };
 
 static int bsys_dispatch_one(struct bsys_desc __user *d)

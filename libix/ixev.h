@@ -132,7 +132,7 @@ extern void ixev_close(struct ixev_ctx *ctx);
  * Assume (all) memory allocation responsibility goes to app
  * LTODO: global def for keylen? or pass in as parameter..
  */
-extern ssize_t ixev_get(struct ixev_ctx *ctx, char *key, void *addr);
+extern void ixev_get(struct ixev_ctx *ctx, char *key);
 extern void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len);
 extern void ixev_delete(struct ixev_ctx *ctx, char *key);
 

@@ -174,6 +174,7 @@ enum {
 	KSYS_TCP_CLOSE,
 	KSYS_IO_READ,
 	KSYS_IO_WRITE,
+	KSYS_IO_READ_DONE,
 	KSYS_NR,
 };
 
@@ -193,6 +194,13 @@ static inline void ksys_io_read(struct bsys_desc *d, char *key){
  */
 static inline void ksys_io_write(struct bsys_desc *d, char *key, void *val, size_t len){
 	BSYS_DESC_3ARG(d, KSYS_IO_WRITE, key, val, len);
+}
+
+/**
+ * Reading this address is over
+ */
+static inline void ksys_io_read_done(struct bsys_desc *d, char *key){
+	BSYS_DESC_1ARG(d, KSYS_IO_READ_DONE, key);
 }
 
 /**
@@ -534,6 +542,7 @@ extern long bsys_tcp_close(hid_t handle);
 
 extern ssize_t bsys_io_read(char *key);
 extern ssize_t bsys_io_write(char *key, void *val, size_t len);
+extern ssize_t bsys_io_read_done(void *addr);
 
 struct dune_tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);

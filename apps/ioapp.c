@@ -50,7 +50,6 @@ static void put_handler(struct ixev_ctx *ctx, int reason){
 int main(int argc, char *argv[]){
 
 	int ret;
-	ssize_t ev_ret;
 	struct ixev_ctx *ctx;
 	ctx = malloc(sizeof(struct ixev_ctx));
 
@@ -68,20 +67,18 @@ int main(int argc, char *argv[]){
 	char val[] = "test_value";
 	size_t len = strlen(val);
 
-	char* buf = malloc(10); //TODO: how to know how big a buffer to allow for gets..?
 
 	// since these are dummy calls, for now don't need callbacks/handlers
 	ixev_put(ctx, key, val, len);
-	ev_ret = ixev_get(ctx, key, buf);
+	ixev_get(ctx, key);
 
 	//TODO: test delete...?
 	//ixev_delete(ctx, key);
 
 
-	//while(1)
-	ixev_wait();
+	while(1)
+		ixev_wait();
 
-	free(buf);
 	free(ctx);
 
 }
