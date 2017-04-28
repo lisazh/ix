@@ -198,6 +198,17 @@ static void ixev_timer_event(unsigned long cookie)
 	t->handler(t->arg);
 }
 
+static void ixev_io_read(char *key, void *data, size_t len)
+{
+	printf("ixev_io_read: key=%s,  bytes=%lu val=%s\n", key, len, (char *)data);
+}
+
+
+static void ixev_io_wrote_done(char *key)
+{
+	printf("ixev_io_wrote_done: key=%s\n", key);
+}
+
 static struct ix_ops ixev_ops = {
 	.tcp_connected	= ixev_tcp_connected,
 	.tcp_knock	= ixev_tcp_knock,
@@ -205,8 +216,9 @@ static struct ix_ops ixev_ops = {
 	.tcp_recv	= ixev_tcp_recv,
 	.tcp_sent	= ixev_tcp_sent,
 	.timer_event	= ixev_timer_event,
+	.io_read    = ixev_io_read,
+	.io_wrote_done = ixev_io_wrote_done,
 };
-//LTODO: add I/O functions to this struct 
 
 /**
  * ixev_recv - read data with copying

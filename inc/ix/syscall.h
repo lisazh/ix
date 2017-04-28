@@ -345,6 +345,8 @@ enum {
 	USYS_TCP_SENT,
 	USYS_TCP_DEAD,
 	USYS_TIMER,
+	USYS_IO_READ,
+	USYS_IO_WROTE,
 	USYS_NR,
 };
 
@@ -479,6 +481,29 @@ usys_timer(unsigned long cookie)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_1ARG(d, USYS_TIMER, cookie);
+}
+
+/**
+ * usys_io_read - Read data from persistent storage
+ * @addr: the address of the data
+ * @len: the length of the data
+ */
+static inline void
+usys_io_read(char *key, void *addr, size_t len)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_3ARG(d, USYS_IO_READ, key, addr, len);
+}
+
+/**
+ * usys_io_wrote - Wrote data to persistent storage
+ * @key: the key name
+ */
+static inline void
+usys_io_wrote(char *key)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_1ARG(d, USYS_IO_WROTE, key);
 }
 
 /*

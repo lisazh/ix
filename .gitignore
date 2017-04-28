@@ -12,6 +12,8 @@
 /apps/echoclient
 /apps/echoserver
 /apps/ioapp
+tags
 
 .DS_Store
 */.DS_Store
+*.swp
