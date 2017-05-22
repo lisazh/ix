@@ -10,22 +10,31 @@
 #include <ix/city.h>
 #include <ix/blk.h>
 
-/*
-struct index_ent { //TODO: how to search/scan quickly?
-	char *key; //TODO: key length? or make sure null-terminated..
-	int64_t lba;
-	uint64_t lba_count; //TODO may remove this so we can have exact mapping to on-disk metadata..
-	//?? what else? checksums? versioning?
-
-	struct index_ent *next; //for hash chaining..?
-};
-
-static struct index_ent indx[MAX_ENTRIES];
-*/
+// for CRC
+#define CRC_POLYNOM 0x1021
+#define CRC_WIDTH 16
+#define CRC_TOPBIT (1 << (CRC_WIDTH - 1)) 
 
 // wrapper function, in case we decide to change the hash...
 uint64_t hashkey(char *key, size_t keylen){
 	return CityHash64(key, keylen);
+}
+
+
+uint16_t crc_data(uint8_t msg[], size_t len){
+ 	uint16_t crc = 0;
+ 	for (int i = 0; i < len; i++){
+ 		crc ^= (msg[i] << (CRC_WIDTH - 8));
+
+ 		for (uint8_t bit = 0; bit < 8; bit++){
+ 			if (crc & CRC_TOPBIT){
+ 				crc = (crc << 1) ^ CRC_POLYNOM; 
+ 			} else {
+ 				crc = (crc << 1);
+ 			}
+ 		}
+ 	}
+ 	return crc;
 }
 
 /*

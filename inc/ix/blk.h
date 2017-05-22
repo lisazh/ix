@@ -47,6 +47,8 @@ void print_freelist();
 
 /* index management */
 
+uint16_t crc_data(uint8_t msg[], size_t len);
+
 struct index_ent *get_key_to_lba(char *key);
 
 struct index_ent *insert_key(char *key, ssize_t val_len);

@@ -17,8 +17,8 @@
 
 #include <stdio.h>
 
-#define NVME_AWUNPF 2048 //TODO: will need to get this from "device" config or whatever
-#define MAX_BATCH (NVME_AWUNPF/LBA_SIZE) //TODO move LBA_SIZE def from somewhere else 
+#define NVME_AWUNPF 2048 //LTODO: will need to get this from "device" config or whatever
+#define MAX_BATCH (NVME_AWUNPF/LBA_SIZE) //LTODO move LBA_SIZE def from somewhere else 
 
 struct ibuf{
 	void *buf;// mempools? mempool datastore? use smthg figure out init
@@ -46,12 +46,11 @@ ssize_t bsys_io_read(char *key){
 ssize_t bsys_io_write(char *key, void *val, size_t len){
 	//FIXME: decide where to write
 	
-	// do index magic..
-
+	// do index magic
 	struct index_ent *meta = insert_key(key, len);
+	meta->crc = crc_data((uint8_t *)val, len);
 
 	currbatch[currind++] = meta; //keep for later to allocate blocks 
-	//TODO: checksum?
 
 	//dummy_dev_write(val, 1, 1);
 	
@@ -59,7 +58,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 		bsys_io_write_flush();
 	}
 
-//!!TODO pointer math to find offset in buf to write to....
+	//LTODO: replace with appropriate bufferin gmechanism
 	memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks]), meta, sizeof(struct index_ent)); 
 	memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks + sizeof(struct index_ent)]), val, len); 
 
@@ -74,6 +73,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 ssize_t bsys_io_write_flush(){
 
 	//update metadata
+	//LTODO: move this to write done side..
 	uint64_t startlba = get_blk(iobuf->numblks);
 	for (int i = 0; i < MAX_BATCH; i++){
 		if (currbatch[i]){		
@@ -85,7 +85,7 @@ ssize_t bsys_io_write_flush(){
 		}
 	}
 
-	//TODO: issue the write to device...
+	//LTODO: issue the write to device...
 
 
 	iobuf->numblks = 0;
