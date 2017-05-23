@@ -27,9 +27,9 @@ struct ibuf{
 	struct index_ent currbatch[MAX_BATCH];
 	int32_t currind; 
 	
-}
+};
 
-static struct ibuf iobuf;
+static struct *ibuf iobuf; //LTODO: initialize somewhere...
 
 ssize_t bsys_io_read(char *key){
 	//FIXME: map key to LBAs
@@ -50,13 +50,15 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	struct index_ent *meta = insert_key(key, len);
 	meta->crc = crc_data((uint8_t *)val, len);
 
-	currbatch[currind++] = meta; //keep for later to allocate blocks 
+	iobuf->currbatch[iobuf->currind++] = meta; //keep for later to allocate blocks 
 
 	//dummy_dev_write(val, 1, 1);
 	
+	/*
 	if (iobuf->numblks > MAX_BATCH){ 
 		bsys_io_write_flush();
 	}
+	*/
 
 	//LTODO: replace with appropriate bufferin gmechanism
 	memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks]), meta, sizeof(struct index_ent)); 
@@ -76,11 +78,11 @@ ssize_t bsys_io_write_flush(){
 	//LTODO: move this to write done side..
 	uint64_t startlba = get_blk(iobuf->numblks);
 	for (int i = 0; i < MAX_BATCH; i++){
-		if (currbatch[i]){		
+		if (iobuf->currbatch[i]){		
 			if (i == 0){
-				currbatch[i]->lba = startlba;
+				iobuf->currbatch[i]->lba = startlba;
 			} else {
-				currbatch[i]->lba = startlba + currbatch[i-1]->lba_count;
+				iobuf->currbatch[i]->lba = startlba + currbatch[i-1]->lba_count;
 			}
 		}
 	}
@@ -90,6 +92,8 @@ ssize_t bsys_io_write_flush(){
 
 	iobuf->numblks = 0;
 	iobuf->keyind = 0;
+
+	return numblks;
 }
 
 ssize_t bsys_io_read_done(void *addr)
