@@ -187,6 +187,8 @@ void index_init(){
 		indx[i].crc = 0;
 		indx[i].next = NULL;
 	}
+
+	//LTODO: add crc checks while scanning..
 	
 }
 

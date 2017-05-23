@@ -21,7 +21,7 @@
 
 # Makefile for the core system
 
-SRC = ethdev.c ethfg.c ethqueue.c cfg.c control_plane.c cpu.c init.c io.c log.c mbuf.c mem.c mempool.c page.c pci.c utimer.c syscall.c timer.c vm.c dpdk.c dummy_dev.c
+SRC = ethdev.c ethfg.c ethqueue.c cfg.c control_plane.c cpu.c init.c io.c log.c mbuf.c mem.c mempool.c page.c pci.c utimer.c syscall.c timer.c vm.c dpdk.c dummy_dev.c city.c blk_freelist.c blk_index.c 
 
 ifneq ($(ENABLE_KSTATS),)
 SRC += kstats.c tailqueue.c
