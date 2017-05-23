@@ -29,7 +29,7 @@ struct ibuf{
 	
 };
 
-static struct *ibuf iobuf; //LTODO: initialize somewhere...
+static struct ibuf *iobuf; //LTODO: initialize somewhere...
 
 ssize_t bsys_io_read(char *key){
 	//FIXME: map key to LBAs
@@ -77,23 +77,23 @@ ssize_t bsys_io_write_flush(){
 	//update metadata
 	//LTODO: move this to write done side..
 	uint64_t startlba = get_blk(iobuf->numblks);
+	uint64_t ret = iobuf->numblks;
+
 	for (int i = 0; i < MAX_BATCH; i++){
 		if (iobuf->currbatch[i]){		
 			if (i == 0){
 				iobuf->currbatch[i]->lba = startlba;
 			} else {
-				iobuf->currbatch[i]->lba = startlba + currbatch[i-1]->lba_count;
+				iobuf->currbatch[i]->lba = startlba + iobuf->currbatch[i-1]->lba_count;
 			}
 		}
 	}
 
 	//LTODO: issue the write to device...
-
-
 	iobuf->numblks = 0;
 	iobuf->keyind = 0;
 
-	return numblks;
+	return ret;
 }
 
 ssize_t bsys_io_read_done(void *addr)
