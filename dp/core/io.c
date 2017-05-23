@@ -50,7 +50,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	struct index_ent *meta = insert_key(key, len);
 	meta->crc = crc_data((uint8_t *)val, len);
 
-	iobuf->currbatch[iobuf->currind++] = meta; //keep for later to allocate blocks 
+	&(iobuf->currbatch[iobuf->currind++]) = meta; //keep for later to allocate blocks 
 
 	//dummy_dev_write(val, 1, 1);
 	
@@ -61,8 +61,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	*/
 
 	//LTODO: replace with appropriate bufferin gmechanism
-	memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks]), meta, sizeof(struct index_ent)); 
-	memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks + sizeof(struct index_ent)]), val, len); 
+	//memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks]), meta, sizeof(struct index_ent)); 
+	//memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks + sizeof(struct index_ent)]), val, len); 
 
 	iobuf->numblks += meta->lba_count;
 	usys_io_wrote(key);
@@ -82,16 +82,16 @@ ssize_t bsys_io_write_flush(){
 	for (int i = 0; i < MAX_BATCH; i++){
 		if (iobuf->currbatch[i]){		
 			if (i == 0){
-				iobuf->currbatch[i]->lba = startlba;
+				(iobuf->currbatch[i]).lba = startlba;
 			} else {
-				iobuf->currbatch[i]->lba = startlba + iobuf->currbatch[i-1]->lba_count;
+				(iobuf->currbatch[i]).lba = startlba + (iobuf->currbatch[i-1]).lba_count;
 			}
 		}
 	}
 
 	//LTODO: issue the write to device...
 	iobuf->numblks = 0;
-	iobuf->keyind = 0;
+	iobuf->currind = 0;
 
 	return ret;
 }
