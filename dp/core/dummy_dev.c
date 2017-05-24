@@ -1,4 +1,9 @@
 #include <stdio.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <ix/dummy_dev.h>
 #include <ix/page.h>
@@ -7,21 +12,31 @@
 
 #include <assert.h>
 
-#define STORAGE_PAGE_NR 8
+#define STORAGE_SIZE 8*1024*1024
 
 static DEFINE_PERCPU(char *, dummy_dev);
 
 int dummy_dev_init(void)
 {
-	char *arr;
+	int fd, ret;
+	void *vaddr;
 
-	arr = (char *) page_alloc_contig(STORAGE_PAGE_NR);
-	if (!arr)
-		return -ENOMEM;
-	percpu_get(dummy_dev) = arr;
+	fd = shm_open("/dummy-ssd", O_RDWR | O_CREAT, 0660);
+	if (fd == -1)
+		return 1;
+
+	ret = ftruncate(fd, STORAGE_SIZE);
+	if (ret)
+		return ret;
+
+	vaddr = mmap(NULL, STORAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (vaddr == MAP_FAILED)
+		return 1;
+
+	percpu_get(dummy_dev) = vaddr;
 
 	return 0;
-}	
+}
 
 int dummy_dev_write(void *payload, uint64_t lba, uint64_t lba_count)
 {
