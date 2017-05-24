@@ -56,6 +56,21 @@ struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count)
 	return read_mbuf;
 }
 
+int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
+		uint64_t lba_count)
+{
+	int i, bytes_written = 0;
+
+	for (i=0;i<nents;i++) {
+		memcpy(&percpu_get(dummy_dev)[lba * LBA_SIZE + bytes_written],
+				ents[i].base, ents[i].len);
+		bytes_written += ents[i].len;
+		assert(bytes_written <= lba_count * LBA_SIZE);
+	}
+
+	return 0;
+}
+
 void dummy_dev_read_done(void *data)
 {
 	printf("Freeing mbuf\n");
