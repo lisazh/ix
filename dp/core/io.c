@@ -50,7 +50,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	struct index_ent *meta = insert_key(key, len);
 	meta->crc = crc_data((uint8_t *)val, len);
 
-	&(iobuf->currbatch[iobuf->currind++]) = meta; //keep for later to allocate blocks 
+	//LTODO: figure out how to copy metadata or keep pointer to it for later update...
+	//iobuf->currbatch[iobuf->currind++] = *meta; //keep for later to allocate blocks 
 
 	//dummy_dev_write(val, 1, 1);
 	
@@ -80,7 +81,7 @@ ssize_t bsys_io_write_flush(){
 	uint64_t ret = iobuf->numblks;
 
 	for (int i = 0; i < MAX_BATCH; i++){
-		if (iobuf->currbatch[i]){		
+		if (iobuf->currbatch[i].key != NULL){		
 			if (i == 0){
 				(iobuf->currbatch[i]).lba = startlba;
 			} else {
