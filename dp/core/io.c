@@ -49,7 +49,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	struct index_ent *newdata = malloc(sizeof(struct index_ent)); //LTODO: replace with appropriate mem mgmt
 	newdata->key = malloc(strlen(key) + 1);
 	strncpy(newdata->key, key, strlen(key));
-	newdata->key[strlen(key)] = '\0'
+	newdata->key[strlen(key)] = '\0';
 	newdata->lba_count = calc_numblks(len);
 	newdata->crc = crc_data((uint8_t *)val, len);
 

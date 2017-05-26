@@ -53,11 +53,13 @@ void print_freelist(); //for debugging..
 
 uint16_t crc_data(uint8_t msg[], size_t len);
 
-uint64_t calc_numblks(ssize_t data_len){
+uint64_t calc_numblks(ssize_t data_len);
 
 struct index_ent *get_key_to_lba(char *key);
 
-struct index_ent *insert_key(char *key, ssize_t val_len);
+void update_index(struct index_ent *meta);
+
+//struct index_ent *insert_key(char *key, ssize_t val_len);
 
 void delete_key(char *key);
 
