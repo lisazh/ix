@@ -15,7 +15,7 @@
 #include <ix/blk.h>
 
 
-#include <stdio.h>
+//#include <stdio.h>
 
 #define NVME_AWUNPF 2048 //LTODO: will need to get this from "device" config or whatever
 #define MAX_BATCH (NVME_AWUNPF/LBA_SIZE) //LTODO move LBA_SIZE def from somewhere else 
@@ -53,7 +53,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	newdata->lba_count = calc_numblks(len);
 	newdata->crc = crc_data((uint8_t *)val, len);
 
-	iobuf->currbatch[iobuf->currind++] = &meta; //keep for later to allocate blocks 
+	iobuf->currbatch[iobuf->currind++] = &newdata; //keep for later to allocate blocks 
 
 	//dummy_dev_write(val, 1, 1);
 	
@@ -111,13 +111,14 @@ void io_write_cb(){
 
 	// update metadata & free all interim metadata
 
+	uint64_t ind = iobuf->currind;
 
 	//struct index_ent *meta = insert_key(key);
-	for (int i = 0; i < currind; i++){
-		update_index(iobuf->currbatch[currind]);
-		usys_io_wrote(iobuf->currbatch[currind]->key);
+	for (int i = 0; i < ind; i++){
+		update_index(iobuf->currbatch[i]);
+		usys_io_wrote(iobuf->currbatch[i]->key);
 
-		iobuf->currbatch[currind] = NULL; //update the pointer
+		iobuf->currbatch[i] = NULL; //update the pointer
 	}
 
 	//reset variables
@@ -126,9 +127,9 @@ void io_write_cb(){
 
 }
 
-// TODO: unpack key, address and length from "read_info"
-void io_read_cb(struct read_info *info){
-	 usys_io_read();
+// TODO: unpack key, address and length from param
+void io_read_cb(){
+	 //usys_io_read();
 
 }
 	
