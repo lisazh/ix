@@ -13,26 +13,30 @@
 
 #define LBA_SIZE 512 //TODO: tune this depending on the device..?
 #define MAX_LBA_NUM 100000 //TODO: THIS IS TEMPORARY...
+#define MAX_KEY_LEN 128
 
-#define META_SZ 32 //size of metadata, TODO: RECOMPUTE LATER..
+#define META_SZ (MAX_KEY_LEN + 144) //size of metadata, TODO: RECOMPUTE LATER..
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
 /*
- struct lba_metadata{
- 	uint64_t lba;
- 	uint64_t blk_no; // TODO: see if can use bitmasks to figure this out
- 	uint64_t total_blks;
+ struct lba_meta{
+ 	int64_t lba;
+ 	uint64_t lba_count; // TODO: see if can use bitmasks to figure this out
+ 	uint16_t crc;
  };
-*/
+ */
 
 struct index_ent {
 	char *key;
 	int64_t lba;
 	uint64_t lba_count;
 	uint16_t crc;
-	//TODO: version?
+	//LTODO: version?
+	//struct lba_meta *metadata; //wrap metadata for asynchronous replacement..
 	struct index_ent *next; //for hash chaining..
 };
+
+
 
 static struct index_ent indx[MAX_ENTRIES];
 
@@ -43,11 +47,13 @@ void free_blk(uint64_t lba, uint64_t num_blks);
 
 void freelist_init();
 
-void print_freelist();
+void print_freelist(); //for debugging..
 
 /* index management */
 
 uint16_t crc_data(uint8_t msg[], size_t len);
+
+uint64_t calc_numblks(ssize_t data_len){
 
 struct index_ent *get_key_to_lba(char *key);
 

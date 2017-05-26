@@ -65,15 +65,48 @@ struct index_ent *get_key_to_lba(char *key){
 	return ret;		
 }
 
-//helper function for determining how many blocks the data should occupy
-//TODO: this may change depending on data layout..
+/* 
+ * helper function for determining how many blocks the data should occupy
+ * assumes data_len is never zero..	
+ */
+//LTODO: this may change depending on data layout..
 uint64_t calc_numblks(ssize_t data_len){
 	//uint64_t ret = (data_len + DATA_SZ - 1) / DATA_SZ; //short way;
 	uint64_t ret = 1; //minimum one block 
-	if (data_len > DATA_SZ) //more than one block needed
+	if (data_len > DATA_SZ)
 		ret += ((data_len - DATA_SZ) + LBA_SIZE - 1) / LBA_SIZE;
-
 	return ret;
+}
+
+
+void update_index(struct index_ent *meta){
+	char *key = meta->key;
+
+	uint64_t hashval = hashkey(key, strlen(key));
+	struct index_ent *oldent = indx[hashval];
+	if (oldent){ //need to assume that pointer is either null or a valid entry..
+		if (strncmp(oldent->key, key, strlen(key)) == 0){
+			//simple swap
+			meta->next = oldent->next;
+			indx[hashval] = meta;
+			free(oldent);
+		} else { //traverse hash chain..
+			struct index_ent *tmp = oldent->next;
+			while (tmp){
+				if (strncmp(tmp->key, key, strlen(key)) == 0){
+					break;	
+				}
+				oldent = tmp;
+				tmp = tmp->next;
+			}
+			oldent->next = meta;
+			if (tmp){
+				meta->next = tmp->next;
+				free(tmp); //remove old index entry
+
+			}
+		}
+	}
 }
 
 /*
@@ -89,7 +122,6 @@ struct index_ent *insert_key(char *key, ssize_t val_len){
 	uint64_t lba_ct = calc_numblks(val_len);
 
 	//struct index_ent *insert = &(indx[hashval % MAX_ENTRIES]);
-
 	struct index_ent *insert = get_key_to_lba(key);
 
 	if (insert){ //key already exists, just update metadata
@@ -117,7 +149,7 @@ struct index_ent *insert_key(char *key, ssize_t val_len){
 		insert->key[strlen(key)] = '\0'; //safety
 	}
 	
-	insert->lba_count = lba_ct;
+	//insert->lba_count = lba_ct;
 
 	//printf("DEBUG: Inserted key %s at lba %ld\n", insert->key, insert->lba);
 	printf("DEBUG: Inserted key %s for %lu blocks\n", insert->key, insert->lba_count);
@@ -179,16 +211,17 @@ void delete_key(char *key){
  */
 void index_init(){
 	//indx = malloc((sizeof(struct index_ent) * MAX_ENTRIES)); //TODO: ???use appropriate "memory" allocation
-
+	/*
 	for (int i = 0; i < MAX_ENTRIES; i++){
 		indx[i].key = NULL;
-		indx[i].lba = -1;
-		indx[i].lba_count = 0;
-		indx[i].crc = 0;
+		indx[i].metadata = NULL;
 		indx[i].next = NULL;
 	}
-
-	//LTODO: add crc checks while scanning..
+	*/
+	for (int i = 0; i < MAX_ENTRIES; i++){
+		indx[i] = NULL; //initialize to null-pointers..
+	}
+	//LTODO: remember to add crc checks while scanning from device..
 	
 }
 
@@ -238,4 +271,4 @@ int main(int argc, char *argv[]){
 
 }
 
-	*/
+*/
