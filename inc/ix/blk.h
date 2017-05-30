@@ -5,7 +5,7 @@
 
 #include <stdint.h> //TODO: replace w/ <ix/types.h> or smthg..?
 #include <assert.h> //TODO: to be replaced with appropriate error checking..
-
+#include <ix/dummy_dev.h>
 
 
 #define MAX_ENTRIES 8 //dummy for now, eventually will need to decide how big we want index to be..

@@ -67,6 +67,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	newdata->lba_count = calc_numblks(len);
 	newdata->crc = crc_data((uint8_t *)val, len);
 
+	int currind = iobuf->currind;
 	iobuf->currbatch[iobuf->currind++] = newdata; //keep for later to allocate blocks 
 	iobuf->numblks += newdata->lba_count;
 	iobuf->buf[currind*SG_MULT].base = newdata;
@@ -103,7 +104,7 @@ ssize_t bsys_io_write_flush(){
 	}
 
 	//LTODO: issue the write to device...
-	dummy_dev_write(iobuf->buf, iobuf->currind, startlba, iobuf->numblks);
+	dummy_dev_writev(iobuf->buf, iobuf->currind, startlba, iobuf->numblks);
 
 	//LTODO: add delays..
 	io_write_cb();
