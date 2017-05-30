@@ -47,6 +47,9 @@ int blkio_init(void) {
 ssize_t bsys_io_read(char *key){
 	//FIXME: map key to LBAs
 	struct index_ent *ent = get_key_to_lba(key);
+	if (!ent)
+		return -1;
+
 	printf("DEBUG: about to read lba %d for %u blocks\n", ent->lba, ent->lba_count);
 	
 	//Add this in a timer event
@@ -89,6 +92,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 //flush batched writes to device..
 ssize_t bsys_io_write_flush(){
 
+	printf("DEBUG: about to issue writes\n");
 	uint64_t startlba = get_blk(iobuf->numblks);
 	//uint64_t ret = iobuf->numblks;
 
@@ -104,7 +108,7 @@ ssize_t bsys_io_write_flush(){
 	}
 
 	//LTODO: issue the write to device...
-	dummy_dev_writev(iobuf->buf, iobuf->currind, startlba, iobuf->numblks);
+	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
 
 	//LTODO: add delays..
 	io_write_cb();
@@ -139,6 +143,7 @@ void io_write_cb(){
 		update_index(iobuf->currbatch[i]);
 		usys_io_wrote(iobuf->currbatch[i]->key);
 
+		printf("DEBUG: updated index entry for %s\n", iobuf->currbatch[i]->key);
 		iobuf->currbatch[i] = NULL; //update the pointer
 	}
 
