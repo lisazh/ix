@@ -35,6 +35,7 @@ int blkio_init(void) {
 
 	freelist_init(); //LTODO: this involves malloc
 	index_init();
+	iobuf = malloc(sizeof(struct ibuf));
 	iobuf->numblks = 0;
 	iobuf->currind = 0;
 	return 0;
