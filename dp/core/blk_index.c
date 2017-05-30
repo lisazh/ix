@@ -109,7 +109,7 @@ void update_index(struct index_ent *meta){
 	}
 }
 
-/*
+/* DEPRECATED
  * Handles insertion of a key
  * TODO: replace all calls to malloc with appropriate memory management mech...
  * ALSO: consider separating cases of updating old entry & insert new entry, depending on performance
@@ -221,6 +221,7 @@ void index_init(){
 	for (int i = 0; i < MAX_ENTRIES; i++){
 		indx[i] = NULL; //initialize to null-pointers..
 	}
+	//LTODO: scan through device and update freelist appropriately..
 	//LTODO: remember to add crc checks while scanning from device..
 	
 }

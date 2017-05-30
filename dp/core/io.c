@@ -32,6 +32,11 @@ struct ibuf{
 static struct ibuf *iobuf; //LTODO: initialize somewhere...
 
 int blkio_init(void) {
+
+	freelist_init(); //LTODO: this involves malloc
+	index_init();
+	iobuf->numblks = 0;
+	iobuf->currind = 0;
 	return 0;
 }
 
@@ -58,8 +63,6 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	newdata->crc = crc_data((uint8_t *)val, len);
 
 	iobuf->currbatch[iobuf->currind++] = &newdata; //keep for later to allocate blocks 
-
-	//dummy_dev_write(val, 1, 1);
 	
 	/*
 	if (iobuf->numblks > MAX_BATCH){ 
@@ -95,9 +98,14 @@ ssize_t bsys_io_write_flush(){
 	}
 
 	//LTODO: issue the write to device...
+	//dummy_dev_write(val, 1, 1);
+
 	return ret;
 }
 
+/* Indicates read is completed and buffer can be reclaimed
+ *
+ */ 
 ssize_t bsys_io_read_done(void *addr)
 {
 	void *kaddr = iomap_to_mbuf(&percpu_get(mbuf_mempool), addr);
@@ -136,4 +144,6 @@ void io_read_cb(){
 	 //usys_io_read();
 
 }
+
+void 
 	
