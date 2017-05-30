@@ -44,7 +44,7 @@ uint16_t crc_data(uint8_t msg[], size_t len){
 struct index_ent *get_key_to_lba(char *key){
 
 	uint64_t hashval = hashkey(key, strlen(key));
-	struct index_ent *ret = &(indx[hashval % MAX_ENTRIES]);
+	struct index_ent *ret = indx[hashval % MAX_ENTRIES];
 
 	if (!ret->key){ //no key found 
 		//TODO: error handling
@@ -113,7 +113,7 @@ void update_index(struct index_ent *meta){
  * Handles insertion of a key
  * TODO: replace all calls to malloc with appropriate memory management mech...
  * ALSO: consider separating cases of updating old entry & insert new entry, depending on performance
- */ 
+ 
 struct index_ent *insert_key(char *key, ssize_t val_len){
 
 	// compute index metadata..
@@ -156,6 +156,7 @@ struct index_ent *insert_key(char *key, ssize_t val_len){
 
 	return insert;
 }
+*/
 
 /*
  * Remove key from index
@@ -167,7 +168,7 @@ void delete_key(char *key){
 
 	int ind = hashkey(key, strlen(key)) % MAX_ENTRIES;
 
-	struct index_ent *oldent = &(indx[ind]);
+	struct index_ent *oldent = indx[ind];
 	if (strncmp(oldent->key, key, strlen(key)) != 0){ //check the chain
 		struct index_ent *tmp = oldent->next;
 		while(tmp){

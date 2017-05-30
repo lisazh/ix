@@ -62,7 +62,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	newdata->lba_count = calc_numblks(len);
 	newdata->crc = crc_data((uint8_t *)val, len);
 
-	iobuf->currbatch[iobuf->currind++] = &newdata; //keep for later to allocate blocks 
+	iobuf->currbatch[iobuf->currind++] = newdata; //keep for later to allocate blocks 
 	
 	/*
 	if (iobuf->numblks > MAX_BATCH){ 
@@ -145,5 +145,4 @@ void io_read_cb(){
 
 }
 
-void 
 	
