@@ -38,7 +38,7 @@ struct index_ent {
 
 
 
-static struct index_ent indx[MAX_ENTRIES];
+static struct index_ent *indx[MAX_ENTRIES];
 
 /* free list management */
 uint64_t get_blk(uint64_t num_blks);
