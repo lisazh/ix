@@ -46,7 +46,7 @@ struct index_ent *get_key_to_lba(char *key){
 	uint64_t hashval = hashkey(key, strlen(key));
 	struct index_ent *ret = indx[hashval % MAX_ENTRIES];
 
-	if (!ret->key){ //no key found 
+	if (!ret){ //no key found 
 		//TODO: error handling
 		return NULL;
 
@@ -106,6 +106,8 @@ void update_index(struct index_ent *meta){
 
 			}
 		}
+	} else { //key does not exist..
+		indx[hashval] = meta;
 	}
 }
 
