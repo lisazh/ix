@@ -43,7 +43,7 @@ int blkio_init(void) {
 	iobuf->numblks = 0;
 	iobuf->currind = 0;
 	for (int i = 0; i < MAX_BATCH; i++)
-		currbatch[i] = NULL; //initialize pointers..
+		iobuf->currbatch[i] = NULL; //initialize pointers..
 	return 0;
 }
 
