@@ -74,6 +74,7 @@ extern int mempool_init(void);
 extern int init_migration_cpu(void);
 extern int dpdk_init(void);
 extern int dummy_dev_init(void);
+extern int blkio_init(void);
 
 struct init_vector_t {
 	const char *name;
@@ -104,6 +105,7 @@ static struct init_vector_t init_tbl[] = {
 #endif
 	{ "init-net", NULL,         init_network_cpu, NULL},  // FIXME should be split
 	{ "dummy_dev", NULL, dummy_dev_init, NULL},
+	{ "io", NULL, blkio_init, NULL},
 	{ NULL, NULL, NULL, NULL}
 };
 

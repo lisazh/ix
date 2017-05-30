@@ -31,6 +31,10 @@ struct ibuf{
 
 static struct ibuf *iobuf; //LTODO: initialize somewhere...
 
+int blkio_init(void) {
+	return 0;
+}
+
 ssize_t bsys_io_read(char *key){
 	//FIXME: map key to LBAs
 	struct index_ent *ent = get_key_to_lba(key);
