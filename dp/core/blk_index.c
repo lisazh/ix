@@ -82,7 +82,7 @@ uint64_t calc_numblks(ssize_t data_len){
 void update_index(struct index_ent *meta){
 	char *key = meta->key;
 
-	uint64_t hashval = hashkey(key, strlen(key));
+	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *oldent = indx[hashval];
 	if (oldent){ //need to assume that pointer is either null or a valid entry..
 		if (strncmp(oldent->key, key, strlen(key)) == 0){
