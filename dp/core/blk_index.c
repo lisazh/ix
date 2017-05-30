@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-//#include <stdio.h> //for testing only..
+#include <stdio.h> //for testing only..
 #include <ix/city.h>
 #include <ix/blk.h>
 
@@ -43,12 +43,14 @@ uint16_t crc_data(uint8_t msg[], size_t len){
  */
 struct index_ent *get_key_to_lba(char *key){
 
-	uint64_t hashval = hashkey(key, strlen(key));
-	struct index_ent *ret = indx[hashval % MAX_ENTRIES];
+	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
+	struct index_ent *ret = indx[hashval];
 
-	if (!ret){ //no key found 
+	printf("DEBUG: looking for key %s with hash %lu\n", key, hashval);
+
+	if (ret == NULL){ //no key found 
 		//TODO: error handling
-		return NULL;
+		return ret;
 
 	} else if (strncmp(ret->key, key, strlen(key)) != 0) { //check chain
 		while (ret->next){
@@ -84,7 +86,7 @@ void update_index(struct index_ent *meta){
 
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *oldent = indx[hashval];
-	if (oldent){ //need to assume that pointer is either null or a valid entry..
+	if (oldent != NULL){ //need to assume that pointer is either null or a valid entry..
 		if (strncmp(oldent->key, key, strlen(key)) == 0){
 			//simple swap
 			meta->next = oldent->next;
@@ -106,7 +108,8 @@ void update_index(struct index_ent *meta){
 
 			}
 		}
-	} else { //key does not exist..
+	} else { //key not already in index
+		printf("DEBUG: inserting key %s with hash %lu\n", key, hashval);
 		indx[hashval] = meta;
 	}
 }
