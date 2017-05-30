@@ -11,7 +11,7 @@
 #define MAX_ENTRIES 8 //dummy for now, eventually will need to decide how big we want index to be..
  						// NOTE also what is this number in relation to # of (per-core) LBAs?
 
-#define LBA_SIZE 512 //TODO: tune this depending on the device..?
+//#define LBA_SIZE 512 //TODO: this is defined in dummy_dev.h
 #define MAX_LBA_NUM 100000 //TODO: THIS IS TEMPORARY...
 #define MAX_KEY_LEN 128
 

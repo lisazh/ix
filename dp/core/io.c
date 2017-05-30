@@ -15,14 +15,17 @@
 #include <ix/blk.h>
 
 
-//#include <stdio.h>
+#include <stdio.h>
 
-#define NVME_AWUNPF 2048 //LTODO: will need to get this from "device" config or whatever
-#define MAX_BATCH (NVME_AWUNPF/LBA_SIZE) //LTODO move LBA_SIZE def from somewhere else 
+//#define NVME_AWUNPF 2048 //LTODO: will need to get this from "device" config or whatever
+#define DEVBLK_SIZE 1000000 // reasonable approximation of an erase block..
+#define MAX_BATCH (DEVBLK_SIZE/LBA_SIZE) //LTODO move LBA_SIZE def from somewhere else 
+#define SG_MULT 2 //number of sg entries needed per write (LTODO change to 3 eventually)
+// LTODO: for each write need 3 entries: meta, data, zeros ()
+									 
 
 struct ibuf{
-	void *buf;// mempools? mempool datastore? use smthg figure out init
-				// also make sure this is properly zero'd when init'ing
+	struct sg_entry buf[MAX_BATCH*SG_MULT]; 
 	int32_t numblks;
 	struct index_ent *currbatch[MAX_BATCH];
 	int32_t currind; 
@@ -44,9 +47,10 @@ int blkio_init(void) {
 ssize_t bsys_io_read(char *key){
 	//FIXME: map key to LBAs
 	struct index_ent *ent = get_key_to_lba(key);
+	printf("DEBUG: about to read lba %d for %u blocks\n", ent->lba, ent->lba_count);
 	
 	//Add this in a timer event
-	struct mbuf *buff = dummy_dev_read(1, 1);
+	struct mbuf *buff = dummy_dev_read(ent->lba, ent->lba_count);
 	void * iomap_addr = mbuf_to_iomap(buff, mbuf_mtod(buff, void *));
 	usys_io_read(key, iomap_addr, buff->len);
 	return 0;
@@ -64,18 +68,18 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	newdata->crc = crc_data((uint8_t *)val, len);
 
 	iobuf->currbatch[iobuf->currind++] = newdata; //keep for later to allocate blocks 
+	iobuf->numblks += newdata->lba_count;
+	iobuf->buf[currind*SG_MULT].base = newdata;
+	iobuf->buf[currind*SG_MULT].len = META_SZ;
+
+	iobuf->buf[currind*SG_MULT + 1].base = val;
+	iobuf->buf[currind*SG_MULT + 1].len = len;
 	
 	/*
-	if (iobuf->numblks > MAX_BATCH){ 
+	if (iobuf->numblks >= MAX_BATCH){ 
 		bsys_io_write_flush();
 	}
 	*/
-
-	//LTODO: replace with appropriate bufferin gmechanism
-	//memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks]), meta, sizeof(struct index_ent)); 
-	//memcpy(&(iobuf->buf[LBA_SIZE*iobuf->numblks + sizeof(struct index_ent)]), val, len); 
-
-	iobuf->numblks += newdata->lba_count;
 
 	return 0;
 }
@@ -85,10 +89,10 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 ssize_t bsys_io_write_flush(){
 
 	uint64_t startlba = get_blk(iobuf->numblks);
-	uint64_t ret = iobuf->numblks;
+	//uint64_t ret = iobuf->numblks;
 
 	//update lba values..
-	for (int i = 0; i < MAX_BATCH; i++){
+	for (int i = 0; i < iobuf->currind; i++){
 		if ((iobuf->currbatch[i])->key != NULL){		
 			if (i == 0){
 				(iobuf->currbatch[i])->lba = startlba;
@@ -99,9 +103,12 @@ ssize_t bsys_io_write_flush(){
 	}
 
 	//LTODO: issue the write to device...
-	//dummy_dev_write(val, 1, 1);
+	dummy_dev_write(iobuf->buf, iobuf->currind, startlba, iobuf->numblks);
 
-	return ret;
+	//LTODO: add delays..
+	io_write_cb();
+
+	return 0;
 }
 
 /* Indicates read is completed and buffer can be reclaimed

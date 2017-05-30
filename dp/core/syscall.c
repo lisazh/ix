@@ -123,7 +123,8 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 			return ret;
 	}
 
-	//TODO: issue batched write here...
+	//LTODO: issue batched write here...
+	bsys_io_write_flush();
 
 	return 0;
 }

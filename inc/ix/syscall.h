@@ -341,7 +341,6 @@ ksys_tcp_close(struct bsys_desc *d, hid_t handle)
 
 /*
  * Commands that can be sent from the kernel to the user-level application.
- * LTODO: ADD I/O EVENTS 
  */
 
 enum {
@@ -543,6 +542,7 @@ extern long bsys_tcp_close(hid_t handle);
 extern ssize_t bsys_io_read(char *key);
 extern ssize_t bsys_io_write(char *key, void *val, size_t len);
 extern ssize_t bsys_io_read_done(void *addr);
+extern ssize_t bsys_io_write_flush();
 
 struct dune_tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);
