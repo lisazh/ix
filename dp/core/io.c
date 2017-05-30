@@ -38,9 +38,12 @@ int blkio_init(void) {
 
 	freelist_init(); //LTODO: this involves malloc
 	index_init();
+
 	iobuf = malloc(sizeof(struct ibuf)); //LTODO: use mempools
 	iobuf->numblks = 0;
 	iobuf->currind = 0;
+	for (int i = 0; i < MAX_BATCH; i++)
+		currbatch[i] = NULL; //initialize pointers..
 	return 0;
 }
 
