@@ -42,7 +42,7 @@ struct ix_ops {
 	void (*tcp_dead)(hid_t handle, unsigned long cookie);
 	void (*timer_event)(unsigned long cookie);
 	void (*io_read)(char *key, void *addr, size_t len);
-	void (*io_wrote_done)(char *key);
+	void (*io_wrote_done)(char *key, void *val);
 };
 
 extern void ix_flush(void);

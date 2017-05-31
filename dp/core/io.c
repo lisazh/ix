@@ -58,7 +58,10 @@ ssize_t bsys_io_read(char *key){
 	//Add this in a timer event
 	struct mbuf *buff = dummy_dev_read(ent->lba, ent->lba_count);
 	void * iomap_addr = mbuf_to_iomap(buff, mbuf_mtod(buff, void *));
-	usys_io_read(key, iomap_addr, buff->len);
+	
+	//LTODO: delays
+	//LTODO: need to package params to callback into one structure..
+	io_read_cb(key, iomap_addr, buff->len);
 	return 0;
 }
 
@@ -144,7 +147,7 @@ void io_write_cb(){
 	//struct index_ent *meta = insert_key(key);
 	for (int i = 0; i < ind; i++){
 		update_index(iobuf->currbatch[i]);
-		usys_io_wrote(iobuf->currbatch[i]->key);
+		usys_io_wrote(iobuf->currbatch[i]->key, iobuf->buf[i*SG_MULT + 1].base);
 
 		printf("DEBUG: updated index entry for %s\n", iobuf->currbatch[i]->key);
 		iobuf->currbatch[i] = NULL; //update the pointer
@@ -157,8 +160,8 @@ void io_write_cb(){
 }
 
 // TODO: unpack key, address and length from param
-void io_read_cb(){
-	 //usys_io_read();
+void io_read_cb(char *key, void *addr, size_t len){
+	usys_io_read(key, addr, len);
 
 }
 

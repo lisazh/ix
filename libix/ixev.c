@@ -41,6 +41,7 @@
 
 static __thread uint64_t ixev_generation;
 static struct ixev_conn_ops ixev_global_ops;
+static struct ixev_io_ops ixev_global_io_ops;
 
 static struct mempool_datastore ixev_buf_datastore;
 __thread struct mempool ixev_buf_pool;
@@ -198,20 +199,19 @@ static void ixev_timer_event(unsigned long cookie)
 	t->handler(t->arg);
 }
 
-void ixev_get_done(void *addr);
-
 static void ixev_io_read(char *key, void *data, size_t len)
 {
 	printf("ixev_io_read: key=%s,  bytes=%lu val=%s\n", key, len, (char *)data);
 
-	//Remove this from here. Move it in the app
-	ixev_get_done(data);
+	ixev_global_io_ops->get_handler(key, data, len);
 }
 
 
-static void ixev_io_wrote_done(char *key)
+static void ixev_io_wrote_done(char *key, void * val);
 {
 	printf("ixev_io_wrote_done: key=%s\n", key);
+
+	ixev_global_io_op->put_handler(key, val);
 }
 
 static struct ix_ops ixev_ops = {
@@ -669,6 +669,17 @@ int ixev_init(struct ixev_conn_ops *ops)
 	return 0;
 }
 
+/*
+ * initialization for I/O - ONLY CALL IF DOING I/O OTHERWISE UNNECESSARY
+ * LTODO: anything else needed in this function..?
+ */
+int ixev_init_io(struct ixev_io_ops *ops)
+{
+	ixev_global_io_ops = *ops;
+	return 0;
+
+}
+
 
 /*
  * NEW: functions for I/O
@@ -676,7 +687,7 @@ int ixev_init(struct ixev_conn_ops *ops)
  *
  */
 
-void ixev_get(struct ixev_ctx *ctx, char *key)
+void ixev_get(char *key)
 {
 	struct bsys_desc *karr_desc;
 
@@ -687,7 +698,7 @@ void ixev_get(struct ixev_ctx *ctx, char *key)
 
 
 
-void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
+void ixev_put(char *key, void *val, size_t len){
 	struct bsys_desc *karr_desc;
 
 	karr_desc = __bsys_arr_next(karr);
@@ -695,7 +706,7 @@ void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len){
 	printf("DEBUG: put called\n");
 }
 
-void ixev_delete(struct ixev_ctx *ctx, char *key){
+void ixev_delete(char *key){
   
 }
 

@@ -58,6 +58,12 @@ struct ixev_conn_ops {
 	void (*dialed)(struct ixev_ctx *ctx, long ret);
 };
 
+struct ixev_io_ops {
+	void (*get_handler)(void *data, size_t len);
+	void (*put_handler)(char *key);
+	void (*delete_handler)(char *key);
+};
+
 /*
  * Use this callback to receive network event notifications
  */
@@ -95,8 +101,8 @@ struct ixev_ctx {
 	struct bsys_desc *recv_done_desc;	/* the current recv_done bsys descriptor */
 	struct bsys_desc *sendv_desc;		/* the current sendv bsys descriptor */
 
-	struct bsys_desc *read_desc;		/* bsys descriptor for IO */ 
-	struct bsys_desc *write_desc; 		/* bsys descriptor for IO */ 
+	//struct bsys_desc *read_desc;		/* bsys descriptor for IO */ 
+	//struct bsys_desc *write_desc; 		/* bsys descriptor for IO */ 
 
 
 	struct sg_entry	recv[IXEV_RECV_DEPTH];	/* receieve SG array */
@@ -128,13 +134,12 @@ extern void ixev_close(struct ixev_ctx *ctx);
 
 /* NEW 
  * Interfaces for storage extension
- * Types for keys void* for now
- * Assume (all) memory allocation responsibility goes to app
- * LTODO: global def for keylen? or pass in as parameter..
  */
-extern void ixev_get(struct ixev_ctx *ctx, char *key);
-extern void ixev_put(struct ixev_ctx *ctx, char *key, void *val, size_t len);
-extern void ixev_delete(struct ixev_ctx *ctx, char *key);
+extern void ixev_get(char *key);
+extern void ixev_put(char *key, void *val, size_t len);
+extern void ixev_delete(char *key);
+extern void ixev_get_done(void *addr);
+
 
 /**
  * ixev_dial - open a connection
@@ -162,4 +167,5 @@ extern void ixev_set_handler(struct ixev_ctx *ctx, unsigned int mask,
 
 extern int ixev_init_thread(void);
 extern int ixev_init(struct ixev_conn_ops *ops);
+extern int ixev_init_io(struct ixev_io_ops *ops);
 
