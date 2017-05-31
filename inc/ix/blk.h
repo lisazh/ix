@@ -15,7 +15,7 @@
 #define MAX_LBA_NUM 100000 //TODO: THIS IS TEMPORARY...
 #define MAX_KEY_LEN 128
 
-#define META_SZ (MAX_KEY_LEN + 144) //size of metadata, TODO: RECOMPUTE LATER..
+#define META_SZ 144 //size of metadata, TODO: RECOMPUTE LATER..
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
 /*

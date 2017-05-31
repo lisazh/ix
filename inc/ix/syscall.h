@@ -505,12 +505,13 @@ usys_io_read(char *key, void *addr, size_t len)
 /**
  * usys_io_wrote - Wrote data to persistent storage
  * @key: the key name
+ * @val: (original) pointer to the value written 
  */
 static inline void
-usys_io_wrote(char *key)
+usys_io_wrote(char *key, void *val)
 {
 	struct bsys_desc *d = usys_next();
-	BSYS_DESC_1ARG(d, USYS_IO_WROTE, key);
+	BSYS_DESC_2ARG(d, USYS_IO_WROTE, key, val);
 }
 
 /*

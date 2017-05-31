@@ -203,15 +203,15 @@ static void ixev_io_read(char *key, void *data, size_t len)
 {
 	printf("ixev_io_read: key=%s,  bytes=%lu val=%s\n", key, len, (char *)data);
 
-	ixev_global_io_ops->get_handler(key, data, len);
+	ixev_global_io_ops.get_handler(key, data, len);
 }
 
 
-static void ixev_io_wrote_done(char *key, void * val);
+static void ixev_io_wrote_done(char *key, void * val)
 {
 	printf("ixev_io_wrote_done: key=%s\n", key);
 
-	ixev_global_io_op->put_handler(key, val);
+	ixev_global_io_ops.put_handler(key, val);
 }
 
 static struct ix_ops ixev_ops = {
@@ -489,8 +489,6 @@ void ixev_ctx_init(struct ixev_ctx *ctx)
 	ctx->ref_head = NULL;
 	ctx->cur_buf = NULL;
 
-	ctx->read_desc = NULL;
-	ctx->write_desc = NULL;
 }
 
 static void ixev_bad_ret(struct ixev_ctx *ctx, uint64_t sysnr, long ret)

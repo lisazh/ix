@@ -59,8 +59,8 @@ struct ixev_conn_ops {
 };
 
 struct ixev_io_ops {
-	void (*get_handler)(void *data, size_t len);
-	void (*put_handler)(char *key);
+	void (*get_handler)(char *key, void *data, size_t len);
+	void (*put_handler)(char *key, void *val);
 	void (*delete_handler)(char *key);
 };
 
