@@ -116,7 +116,7 @@ ssize_t bsys_io_write_flush(){
 		}
 	}
 	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
-
+	printf("DEBUG: Wrote %d entries starting at %ld for %lu blocks\n", (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
 	//LTODO: add delays..
 	io_write_cb();
 
@@ -148,17 +148,18 @@ void io_write_cb(){
 
 	//struct index_ent *meta = insert_key(key);
 	for (int i = 0; i < ind; i++){
-		update_index(iobuf->currbatch[i]);
-		usys_io_wrote(iobuf->currbatch[i]->key, iobuf->buf[i*SG_MULT + 1].base);
+		char *key = update_index(iobuf->currbatch[i]);
+		usys_io_wrote(key, iobuf->buf[i*SG_MULT + 1].base);
 
 		printf("DEBUG: updated index entry for %s\n", iobuf->currbatch[i]->key);
 		iobuf->currbatch[i] = NULL; //update the pointer
 	}
-
+	
 	//reset variables
 	iobuf->currind = 0;
 	iobuf->numblks = 0;
-
+	
+	printf("DEBUG: reset batch variables, index: %d, numblks: %d\n", iobuf->currind, iobuf->numblks);
 }
 
 // TODO: unpack key, address and length from param

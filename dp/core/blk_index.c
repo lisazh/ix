@@ -81,7 +81,7 @@ uint64_t calc_numblks(ssize_t data_len){
 }
 
 
-void update_index(struct index_ent *meta){
+char *update_index(struct index_ent *meta){
 	char *key = meta->key;
 
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
@@ -112,6 +112,7 @@ void update_index(struct index_ent *meta){
 		printf("DEBUG: inserting key %s with hash %lu\n", key, hashval);
 		indx[hashval] = meta;
 	}
+	return key;
 }
 
 /* DEPRECATED

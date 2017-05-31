@@ -207,7 +207,7 @@ static void ixev_io_read(char *key, void *data, size_t len)
 }
 
 
-static void ixev_io_wrote_done(char *key, void * val)
+static void ixev_io_wrote_done(char *key, void *val)
 {
 	printf("ixev_io_wrote_done: key=%s\n", key);
 

@@ -13,9 +13,9 @@
 
 //#define LBA_SIZE 512 //TODO: this is defined in dummy_dev.h
 #define MAX_LBA_NUM 100000 //TODO: THIS IS TEMPORARY...
-#define MAX_KEY_LEN 128
-
-#define META_SZ 144 //size of metadata, TODO: RECOMPUTE LATER..
+#define MAX_KEY_LEN 110
+// ideally want key length + rest of metadata no more than 128 bytes (1/4 of a block)
+#define META_SZ 144/8 //size of metadata in bytes LTODO: find less hardcode-y way to determine
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
 /*
@@ -57,7 +57,7 @@ uint64_t calc_numblks(ssize_t data_len);
 
 struct index_ent *get_key_to_lba(char *key);
 
-void update_index(struct index_ent *meta);
+char *update_index(struct index_ent *meta);
 
 //struct index_ent *insert_key(char *key, ssize_t val_len);
 
