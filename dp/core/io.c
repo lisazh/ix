@@ -78,7 +78,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	newdata->crc = crc_data((uint8_t *)val, len);
 
 	int currind = iobuf->currind;
-	iobuf->currbatch[iobuf->currind++] = newdata; //keep for later to allocate blocks 
+	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
 	iobuf->numblks += newdata->lba_count;
 	iobuf->buf[currind*SG_MULT].base = newdata;
 	iobuf->buf[currind*SG_MULT].len = strlen(newdata->key) + META_SZ;
@@ -86,6 +86,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	iobuf->buf[currind*SG_MULT + 1].base = val;
 	iobuf->buf[currind*SG_MULT + 1].len = len;
 	
+	iobuf->currind++;
+
 	/*
 	if (iobuf->numblks >= MAX_BATCH){ 
 		bsys_io_write_flush();
@@ -113,8 +115,6 @@ ssize_t bsys_io_write_flush(){
 			}
 		}
 	}
-
-	//LTODO: issue the write to device...
 	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
 
 	//LTODO: add delays..
@@ -144,6 +144,7 @@ void io_write_cb(){
 	// update metadata & free all interim metadata
 
 	uint64_t ind = iobuf->currind;
+	printf("DEBUG: updating %ld index entries\n", ind);
 
 	//struct index_ent *meta = insert_key(key);
 	for (int i = 0; i < ind; i++){
