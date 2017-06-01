@@ -91,6 +91,7 @@ char *update_index(struct index_ent *meta){
 			//simple swap
 			meta->next = oldent->next;
 			indx[hashval] = meta;
+			//free(oldent->key);
 			free(oldent);
 		} else { //traverse hash chain..
 			struct index_ent *tmp = oldent->next;

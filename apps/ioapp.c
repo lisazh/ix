@@ -35,7 +35,7 @@ struct ixev_conn_ops conn_ops = {
 };
 
 
-int datalen;
+static int datalen;
 
 /* 
  * dummy helper function to add to data 

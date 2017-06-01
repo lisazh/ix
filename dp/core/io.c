@@ -68,12 +68,14 @@ ssize_t bsys_io_read(char *key){
 
 ssize_t bsys_io_write(char *key, void *val, size_t len){
 	//FIXME: decide where to write
+
+	printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
 	
 	//struct index_ent *meta = insert_key(key, len);
 	struct index_ent *newdata = malloc(sizeof(struct index_ent)); //LTODO: replace with appropriate mem mgmt
 	newdata->key = malloc(strlen(key) + 1);
 	strncpy(newdata->key, key, strlen(key));
-	newdata->key[strlen(key)] = '\0';
+	newdata->key[strlen(key)] = '\0'; // paranoia
 	newdata->lba_count = calc_numblks(len);
 	newdata->crc = crc_data((uint8_t *)val, len);
 
@@ -97,11 +99,18 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	return 0;
 }
 
+void debugprint_sg(){
+	for (int i = 0; i < iobuf->currind; i++)
+		printf("DEBUG: metadata at %p\n", iobuf->currbatch[i]);
+		printf("DEBUG: SG entry metadata at %p with length %ld", iobuf->buf[i*SG_MULT].base, iobuf->buf[i*SG_MULT].len);	
+		printf("DEBUG: SG entry data at %p with length %ld", iobuf->buf[i*SG_MULT + 1].base, iobuf->buf[i*SG_MULT + 1].len);
+}
 
 //flush batched writes to device..
 ssize_t bsys_io_write_flush(){
 
 	printf("DEBUG: about to issue writes\n");
+	debugprint_sg();
 	uint64_t startlba = get_blk(iobuf->numblks);
 	//uint64_t ret = iobuf->numblks;
 
@@ -149,10 +158,17 @@ void io_write_cb(){
 	//struct index_ent *meta = insert_key(key);
 	for (int i = 0; i < ind; i++){
 		char *key = update_index(iobuf->currbatch[i]);
-		usys_io_wrote(key, iobuf->buf[i*SG_MULT + 1].base);
+		void *uaddr = iobuf->buf[i*SG_MULT + 1].base;
+		usys_io_wrote(key, uaddr);
 
 		printf("DEBUG: updated index entry for %s\n", iobuf->currbatch[i]->key);
 		iobuf->currbatch[i] = NULL; //update the pointer
+
+		//update sg_entries
+		iobuf->buf[i*SG_MULT].base = NULL;
+		iobuf->buf[i*SG_MULT].len = 0;
+		iobuf->buf[i*SG_MULT + 1].base = NULL;		
+		iobuf->buf[i*SG_MULT + 1].len = 0;
 	}
 	
 	//reset variables
