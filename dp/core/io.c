@@ -29,8 +29,9 @@ struct ibuf{
 	struct sg_entry buf[MAX_BATCH*SG_MULT]; 
 	int32_t numblks;
 	struct index_ent *currbatch[MAX_BATCH];
-	int32_t currind; 
-	
+	char *usrkeys[MAX_BATCH];
+	int32_t currind;
+
 };
 
 static struct ibuf *iobuf; //LTODO: initialize somewhere...
@@ -43,8 +44,10 @@ int blkio_init(void) {
 	iobuf = malloc(sizeof(struct ibuf)); //LTODO: use mempools
 	iobuf->numblks = 0;
 	iobuf->currind = 0;
-	for (int i = 0; i < MAX_BATCH; i++)
+	for (int i = 0; i < MAX_BATCH; i++){
 		iobuf->currbatch[i] = NULL; //initialize pointers..
+		iobuf->usrkeys[i] = NULL;
+	}
 	return 0;
 }
 
@@ -70,27 +73,28 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	//FIXME: decide where to write
 
 	printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
-	
-	//struct index_ent *meta = insert_key(key, len);
-	//struct index_ent *newdata = malloc(sizeof(struct index_ent)); //LTODO: replace with appropriate mem mgmt
-	//newdata->key = malloc(strlen(key) + 1);
-	//strncpy(newdata->key, key, strlen(key));
-	//newdata->key[strlen(key)] = '\0'; // paranoia
+
 	struct index_ent *newdata = new_ent(key);
-	newdata->lba_count = calc_numblks(len);
+	newdata->val_len = len;
 	newdata->crc = crc_data((uint8_t *)val, len);
 	
-	printf("DEBUG: new metadata entry at %p with key %s at %p\n", (void *)newdata, newdata->key, (void *) newdata->key);
-	printf("DEBUG: size of metadata structure is %d\n", sizeof(struct index_ent));
+	//printf("DEBUG: new metadata entry at %p with key %s at %p\n", (void *)newdata, newdata->key, (void *) newdata->key);
+	//printf("DEBUG: size of metadata structure is %d\n", sizeof(struct index_ent));
+	printf("DEBUG: sanity check metadata entry for key %s and val length %lu\n", newdata->key, newdata->val_len);
+
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
-	iobuf->numblks += newdata->lba_count;
+	iobuf->numblks += calc_numblks(len);
 	iobuf->buf[currind*SG_MULT].base = newdata;
-	iobuf->buf[currind*SG_MULT].len = strlen(newdata->key) + META_SZ;
+	iobuf->buf[currind*SG_MULT].len = META_SZ;
 
 	iobuf->buf[currind*SG_MULT + 1].base = val;
 	iobuf->buf[currind*SG_MULT + 1].len = len;
 	
+	//TODO: zeros here ()
+
+	iobuf->usrkeys[currind] = key;
+
 	iobuf->currind++;
 
 	/*
@@ -163,9 +167,9 @@ void io_write_cb(){
 
 	//struct index_ent *meta = insert_key(key);
 	for (int i = 0; i < ind; i++){
-		char *key = update_index(iobuf->currbatch[i]);
+		update_index(iobuf->currbatch[i]);
 		void *uaddr = iobuf->buf[i*SG_MULT + 1].base;
-		usys_io_wrote(key, uaddr);
+		usys_io_wrote(iobuf->usrkeys[i], uaddr);
 
 		printf("DEBUG: updated index entry for %s\n", iobuf->currbatch[i]->key);
 		iobuf->currbatch[i] = NULL; //update the pointer

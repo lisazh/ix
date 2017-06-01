@@ -41,7 +41,7 @@ uint16_t crc_data(uint8_t msg[], size_t len){
  * Given key, return LBA mapping
  * TODO: look @ bloom filter to optimize membership testing..
  */
-struct index_ent *get_key_to_lba(char *key){
+struct index_ent *get_index_ent(const char *key){
 
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *ret = indx[hashval];
@@ -83,7 +83,7 @@ uint64_t calc_numblks(ssize_t data_len){
 /*  Helper function to get a new index structure
  *
  */
-struct index_ent *new_ent(const char *key){
+struct index_ent *new_index_ent(const char *key){
 	struct index_ent *ret = malloc(sizeof(struct index_ent));
 	memset(ret->key, '\0', MAX_KEY_LEN);
 	//ret->key = {0};
@@ -93,7 +93,7 @@ struct index_ent *new_ent(const char *key){
 }
 
 
-char *update_index(struct index_ent *meta){
+void update_index(struct index_ent *meta){
 	char *key = meta->key;
 
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
@@ -125,7 +125,6 @@ char *update_index(struct index_ent *meta){
 		printf("DEBUG: inserting key %s with hash %lu\n", key, hashval);
 		indx[hashval] = meta;
 	}
-	return key;
 }
 
 /* DEPRECATED

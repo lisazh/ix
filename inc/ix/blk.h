@@ -29,10 +29,10 @@
 struct index_ent {
 	char key[MAX_KEY_LEN];
 	int64_t lba;
-	uint64_t lba_count;
+	uint64_t val_len; //length of value in BYTES
+	//uint64_t lba_count;
 	uint16_t crc;
 	//LTODO: version?
-	//struct lba_meta *metadata; //wrap metadata for asynchronous replacement..
 	struct index_ent *next; //for hash chaining..
 } __packed;
 
@@ -55,11 +55,11 @@ uint16_t crc_data(uint8_t msg[], size_t len);
 
 uint64_t calc_numblks(ssize_t data_len);
 
-struct index_ent *get_key_to_lba(char *key);
+struct index_ent *get_index_ent(const char *key);
 
-struct index_ent *new_ent(const char *key);
+struct index_ent *new_index_ent(const char *key);
 
-char *update_index(struct index_ent *meta);
+void update_index(struct index_ent *meta);
 
 //struct index_ent *insert_key(char *key, ssize_t val_len);
 
