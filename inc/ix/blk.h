@@ -6,7 +6,7 @@
 #include <stdint.h> //TODO: replace w/ <ix/types.h> or smthg..?
 #include <assert.h> //TODO: to be replaced with appropriate error checking..
 #include <ix/dummy_dev.h>
-
+#include <ix/compiler.h>
 
 #define MAX_ENTRIES 8 //dummy for now, eventually will need to decide how big we want index to be..
  						// NOTE also what is this number in relation to # of (per-core) LBAs?
@@ -27,14 +27,14 @@
  */
 
 struct index_ent {
-	char *key;
+	char key[MAX_KEY_LEN];
 	int64_t lba;
 	uint64_t lba_count;
 	uint16_t crc;
 	//LTODO: version?
 	//struct lba_meta *metadata; //wrap metadata for asynchronous replacement..
 	struct index_ent *next; //for hash chaining..
-};
+} __packed;
 
 
 
@@ -56,6 +56,8 @@ uint16_t crc_data(uint8_t msg[], size_t len);
 uint64_t calc_numblks(ssize_t data_len);
 
 struct index_ent *get_key_to_lba(char *key);
+
+struct index_ent *new_ent(const char *key);
 
 char *update_index(struct index_ent *meta);
 

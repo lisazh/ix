@@ -72,13 +72,16 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
 	
 	//struct index_ent *meta = insert_key(key, len);
-	struct index_ent *newdata = malloc(sizeof(struct index_ent)); //LTODO: replace with appropriate mem mgmt
-	newdata->key = malloc(strlen(key) + 1);
-	strncpy(newdata->key, key, strlen(key));
-	newdata->key[strlen(key)] = '\0'; // paranoia
+	//struct index_ent *newdata = malloc(sizeof(struct index_ent)); //LTODO: replace with appropriate mem mgmt
+	//newdata->key = malloc(strlen(key) + 1);
+	//strncpy(newdata->key, key, strlen(key));
+	//newdata->key[strlen(key)] = '\0'; // paranoia
+	struct index_ent *newdata = new_ent(key);
 	newdata->lba_count = calc_numblks(len);
 	newdata->crc = crc_data((uint8_t *)val, len);
-
+	
+	printf("DEBUG: new metadata entry at %p with key %s at %p\n", (void *)newdata, newdata->key, (void *) newdata->key);
+	printf("DEBUG: size of metadata structure is %d\n", sizeof(struct index_ent));
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
 	iobuf->numblks += newdata->lba_count;
@@ -100,10 +103,13 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 }
 
 void debugprint_sg(){
-	for (int i = 0; i < iobuf->currind; i++)
+	for (int i = 0; i < iobuf->currind; i++){
+
 		printf("DEBUG: metadata at %p\n", iobuf->currbatch[i]);
-		printf("DEBUG: SG entry metadata at %p with length %ld", iobuf->buf[i*SG_MULT].base, iobuf->buf[i*SG_MULT].len);	
-		printf("DEBUG: SG entry data at %p with length %ld", iobuf->buf[i*SG_MULT + 1].base, iobuf->buf[i*SG_MULT + 1].len);
+		printf("DEBUG: SG entry metadata at %p with length %ld\n", iobuf->buf[i*SG_MULT].base, iobuf->buf[i*SG_MULT].len);	
+		printf("DEBUG: SG entry data at %p with length %ld\n", iobuf->buf[i*SG_MULT + 1].base, iobuf->buf[i*SG_MULT + 1].len);
+
+	}
 }
 
 //flush batched writes to device..
@@ -125,7 +131,7 @@ ssize_t bsys_io_write_flush(){
 		}
 	}
 	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
-	printf("DEBUG: Wrote %d entries starting at %ld for %lu blocks\n", (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
+	printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
 	//LTODO: add delays..
 	io_write_cb();
 

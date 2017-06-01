@@ -80,6 +80,18 @@ uint64_t calc_numblks(ssize_t data_len){
 	return ret;
 }
 
+/*  Helper function to get a new index structure
+ *
+ */
+struct index_ent *new_ent(const char *key){
+	struct index_ent *ret = malloc(sizeof(struct index_ent));
+	memset(ret->key, '\0', MAX_KEY_LEN);
+	//ret->key = {0};
+	strncpy(ret->key, key, strlen(key));
+
+	return ret;
+}
+
 
 char *update_index(struct index_ent *meta){
 	char *key = meta->key;
@@ -202,13 +214,13 @@ void delete_key(char *key){
 		char *oldkey = oldent->key;
 		free_blk(oldent->lba, oldent->lba_count);
 
-		oldent->key = NULL;
+		//oldent->key = NULL;
 		oldent->lba = -1;
 		oldent->lba_count = 0;
 		oldent->crc = 0;
 		oldent->next = NULL;
 
-		free(oldkey);
+		//free(oldkey);
 
 	}
 
