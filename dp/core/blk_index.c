@@ -182,6 +182,7 @@ struct index_ent *insert_key(char *key, ssize_t val_len){
  * Do not use for updates
  * TODO: possible refactoring needed bottom half bit untidy
 */
+/*
 void delete_key(char *key){
 
 	int ind = hashkey(key, strlen(key)) % MAX_ENTRIES;
@@ -224,6 +225,7 @@ void delete_key(char *key){
 	}
 
 }
+*/
 
 /* 
  * TODO: scan (per cpu partition?) of storage structure and populate indexes

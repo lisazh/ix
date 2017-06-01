@@ -53,14 +53,15 @@ int blkio_init(void) {
 
 ssize_t bsys_io_read(char *key){
 	//FIXME: map key to LBAs
-	struct index_ent *ent = get_key_to_lba(key);
+	struct index_ent *ent = get_index_ent(key);
 	if (!ent)
 		return -1;
 
-	printf("DEBUG: about to read lba %ld for %lu blocks\n", ent->lba, ent->lba_count);
+	//printf("DEBUG: about to read lba %ld for %lu blocks\n", ent->lba, ent->lba_count);
 	
+	uint64_t numblks = calc_numblks(ent->val_len);
 	//Add this in a timer event
-	struct mbuf *buff = dummy_dev_read(ent->lba, ent->lba_count);
+	struct mbuf *buff = dummy_dev_read(ent->lba, numblks);
 	void * iomap_addr = mbuf_to_iomap(buff, mbuf_mtod(buff, void *));
 	
 	//LTODO: delays
@@ -74,7 +75,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
 
-	struct index_ent *newdata = new_ent(key);
+	struct index_ent *newdata = new_index_ent(key);
 	newdata->val_len = len;
 	newdata->crc = crc_data((uint8_t *)val, len);
 	
@@ -130,7 +131,7 @@ ssize_t bsys_io_write_flush(){
 			if (i == 0){
 				(iobuf->currbatch[i])->lba = startlba;
 			} else {
-				(iobuf->currbatch[i])->lba = startlba + (iobuf->currbatch[i-1])->lba_count;
+				(iobuf->currbatch[i])->lba = startlba + calc_numblks((iobuf->currbatch[i-1])->val_len);
 			}
 		}
 	}
