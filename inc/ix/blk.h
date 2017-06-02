@@ -15,7 +15,7 @@
 #define MAX_LBA_NUM 100000 //TODO: THIS IS TEMPORARY...need to determine real value..
 #define MAX_KEY_LEN 110
 // ideally want key length + rest of metadata no more than 128 bytes (1/4 of a block)
-#define META_SZ (144/8) + MAX_KEY_LEN //size of metadata in bytes LTODO: find less hardcode-y way to determine
+#define META_SZ ((144/8) + MAX_KEY_LEN) //size of metadata in bytes LTODO: find less hardcode-y way to determine
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
 /*

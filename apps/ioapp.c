@@ -36,18 +36,15 @@ struct ixev_conn_ops conn_ops = {
 
 
 static int datalen;
-
+static char *val;
 /* 
  * dummy helper function to add to data 
  * for now, assume datum is null-terminated
  */ 
 int append_data(char *buf, const char *datum, int currlen){
+	
+	printf("DEBUG: current data length is %d\n", currlen);
 	int ret = strlen(datum);
-	if (currlen + ret > MAX_DATA){
-		fprintf(stderr, "Cannot copy, exceeded max data size\n");
-		return 0;
-
-	}
 	strncpy((buf + currlen), datum, ret);
 	return ret;
 }
@@ -55,18 +52,22 @@ int append_data(char *buf, const char *datum, int currlen){
 
 // TODO for later testing for kernel side event-firing..
 static void get_handler(char *key, void *data, size_t len){
-
+	/*
 	char *val = malloc(len + 1);
 	memcpy(val, data, len);
-	val[len] = '\0'
+	val[len] = '\0';
 	printf("Value read was %s\n", val);
 	free(val);
+	*/
 	ixev_get_done(data);
 	//assert(len==datalen);
 	if (datalen < MAX_DATA && strncmp(key, "testkey", 7) == 0){
-		len += append_data(data, "\nmore data..", len);
-		ixev_put(key, data, len);
+		datalen += append_data(val, "\nmore data..", len);
+		ixev_put(key, val, datalen);
+	} else {
+		return;
 	}
+
 }
 
 static void put_handler(char *key, void *val){
@@ -74,6 +75,7 @@ static void put_handler(char *key, void *val){
 	if (datalen < MAX_DATA && strncmp(key, "testkey", 7) == 0){
 		ixev_get(key);
 	} else {
+		printf("DEBUG: finished writing, exiting..\n");
 		free(val);
 	}
 
@@ -107,7 +109,7 @@ int main(int argc, char *argv[]){
 	}
 
 	char key[] = "testkey";
-	char *val = malloc(MAX_DATA);
+	val = malloc(MAX_DATA);
 
 	datalen = 0;
 	datalen += append_data(val, "data", datalen);

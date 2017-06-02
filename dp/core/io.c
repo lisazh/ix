@@ -24,6 +24,10 @@
 #define SG_MULT 3 //number of sg entries needed per write (LTODO change to 3 eventually)
 // LTODO: for each write need 3 entries: meta, data, zeros ()
 									 
+void io_read_cb(char *key, void *addr, size_t len);
+void io_write_cb();
+
+
 
 struct ibuf{
 	struct sg_entry buf[MAX_BATCH*SG_MULT]; 
@@ -80,8 +84,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	newdata->crc = crc_data((uint8_t *)val, len);
 	
 	//printf("DEBUG: new metadata entry at %p with key %s at %p\n", (void *)newdata, newdata->key, (void *) newdata->key);
-	printf("DEBUG: size of metadata structure is %d\n", sizeof(struct index_ent));
-	printf("DEBUG: size of next pointer is %d\n", sizeof(struct index_ent *));
+	//printf("DEBUG: size of metadata structure is %lu\n", sizeof(struct index_ent));
+	//printf("DEBUG: size of next pointer is %lu\n", sizeof(struct index_ent *));
 	//printf("DEBUG: sanity check metadata entry for key %s and val length %lu\n", newdata->key, newdata->val_len);
 
 	int currind = iobuf->currind;
@@ -93,11 +97,12 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	iobuf->buf[currind*SG_MULT + 1].base = val;
 	iobuf->buf[currind*SG_MULT + 1].len = len;
 
-	int numzeros = (len > DATA_SZ) ? LBA_SIZE - ((len - DATA_SZ) % LBA_SIZE) : (DATA_SZ - len);
+	int numzeros = (len <= DATA_SZ) ? (DATA_SZ - len) : LBA_SIZE - ((len - DATA_SZ) % LBA_SIZE);
 
 	iobuf->buf[currind*SG_MULT + 2].base = zerobuf;
 	iobuf->buf[currind*SG_MULT + 2].len = numzeros;
-	
+		
+	//printf("DEBUG: writing %d (meta) + %d (data) + %d (zeros) bytes\n", META_SZ, len, numzeros);
 	//TODO: zeros here ()
 
 	iobuf->usrkeys[currind] = key;
@@ -132,7 +137,7 @@ ssize_t bsys_io_write_flush(){
 		return 0;
 	}
 	//debugprint_sg();
-	uint64_t startlba = get_blk(iobuf->numblks);
+	int startlba = get_blk(iobuf->numblks);
 	//uint64_t ret = iobuf->numblks;
 
 	//update lba values..
@@ -158,6 +163,7 @@ ssize_t bsys_io_write_flush(){
  */ 
 ssize_t bsys_io_read_done(void *addr)
 {
+	//printf("DEBUG: read done at address %p\n", addr);
 	void *kaddr = iomap_to_mbuf(&percpu_get(mbuf_mempool), addr);
 	dummy_dev_read_done(kaddr);
 	return 0;
@@ -174,7 +180,7 @@ void io_write_cb(){
 	// update metadata & free all interim metadata
 
 	uint64_t ind = iobuf->currind;
-	printf("DEBUG: updating %ld index entries\n", ind);
+	//printf("DEBUG: updating %ld index entries\n", ind);
 
 	//struct index_ent *meta = insert_key(key);
 	for (int i = 0; i < ind; i++){
@@ -196,7 +202,6 @@ void io_write_cb(){
 	iobuf->currind = 0;
 	iobuf->numblks = 0;
 	
-	printf("DEBUG: reset batch variables, index: %d, numblks: %d\n", iobuf->currind, iobuf->numblks);
 }
 
 // TODO: unpack key, address and length from param

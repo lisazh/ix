@@ -65,6 +65,7 @@ int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 		memcpy(&percpu_get(dummy_dev)[lba * LBA_SIZE + bytes_written],
 				ents[i].base, ents[i].len);
 		bytes_written += ents[i].len;
+		printf("DEBUG: bytes written so far is %d\n", bytes_written);
 		assert(bytes_written <= lba_count * LBA_SIZE);
 	}
 
