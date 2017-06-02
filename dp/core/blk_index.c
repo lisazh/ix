@@ -16,7 +16,7 @@
 #define CRC_TOPBIT (1 << (CRC_WIDTH - 1)) 
 
 // wrapper function, in case we decide to change the hash...
-uint64_t hashkey(char *key, size_t keylen){
+uint64_t hashkey(const char *key, size_t keylen){
 	return CityHash64(key, keylen);
 }
 
@@ -117,6 +117,8 @@ void update_index(struct index_ent *meta){
 		}
 		// clean up oldent
 		free_blk(oldent->lba, calc_numblks(oldent->val_len));
+		printf("DEBUG: freeing LBA %d for %lu blocks\n", oldent->lba, calc_numblks(oldent->val_len));
+		print_freelist();
 		meta->next = oldent->next;
 		free(oldent);
 

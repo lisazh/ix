@@ -74,32 +74,66 @@ uint64_t get_blk(uint64_t num_blks){
  * coalesce free block info w/ entry ent
  */
 static void coalesce_blks(uint64_t lba, uint64_t count, struct freelist_ent *ent){
-	ent->start_lba = lba;
+	//ent->start_lba = lba;
 	ent->lba_count += count;
+	if (lba < ent->start_lba)
+		ent->start_lba = lba;
 
 }
 
+static void coalesce_entries(struct freelist_ent *first, struct freelist_ent *second){
+
+	//assert(first->start_lba + first->lba_count == second->start_lba);
+	
+	assert(first->next == second); //consecutive entries
+	first->lba_count += second->lba_count;
+	first->next = second->next;
+
+	free(second);
+}
+
+/*
+ * Free lba range (assuming freelist organized in ASCENDING order)
+ * NOTE: b/c we allocate from ahead, coalesce from opposite direction
+ */ 
 void free_blk(uint64_t lba, uint64_t num_blks){
 
 	assert(lba < MAX_LBA_NUM);
 
-	struct freelist_ent *iter = freelist; 
-	while (iter->next){ //find where to insert free block
+	struct freelist_ent *prev = NULL; 
+	struct freelist_ent *iter = freelist;
+	while (iter){ //find where to insert free block
 		if (lba < iter->start_lba)
 			break;
+		prev = iter;
 		iter = iter->next;
 	}
-
-	if (lba + num_blks == iter->start_lba){ //coalesce info instead of making a new block
+	
+	
+	if (prev && prev->start_lba + prev->lba_count == lba) //coalesce info instead of making a new block
+		coalesce_blks(lba, num_blks, prev);
+	else if (lba + num_blks == iter->start_lba)
 		coalesce_blks(lba, num_blks, iter);
-	} else {
+	else {
 		struct freelist_ent *newent = malloc(sizeof(struct freelist_ent));
 		newent->start_lba = lba;
 		newent->lba_count = num_blks;
+				
+		if (prev && prev->start_lba < lba && lba < iter->start_lba){
+				//newent->next = iter;
+			prev->next = newent;
+		}
 		newent->next = iter;
-		if (iter == freelist)
+		//prev->next = newent;
+		
+		if (iter == freelist){ //stopped at front
 			freelist = newent;
+			//newent->next = prev;
+		}
+			
 	}
+	if (prev && prev->start_lba + prev->lba_count == iter->start_lba) //double-ended coalescing
+		coalesce_entries(prev, iter);
 
 }
 

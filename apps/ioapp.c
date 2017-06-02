@@ -16,7 +16,7 @@
 
 #include <ixev.h>
 
-#define MAX_DATA 1024
+#define MAX_DATA 514
 
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
@@ -57,10 +57,10 @@ int append_data(char *buf, const char *datum, int currlen){
 static void get_handler(char *key, void *data, size_t datalen){
 	ixev_get_done(data);
 	//assert(len==datalen);
-	if (datalen < (MAX_DATA/2) && strncmp(key, "testkey1", 8) == 0){
+	if (len < (MAX_DATA/2) && strncmp(key, "testkey1", 8) == 0){
 		len += append_data(val, " & more data", datalen);
 		ixev_put(key, val, len);
-	} else if (datalen < MAX_DATA && strncmp(key, "testkey1", 8) == 0){
+	} else if (len < MAX_DATA && strncmp(key, "testkey1", 8) == 0){
 		len += append_data(val, " & more data", datalen);
 		ixev_put(key1, val, len);
 		ixev_put(key2, val, len/2);
@@ -72,9 +72,9 @@ static void get_handler(char *key, void *data, size_t datalen){
 
 static void put_handler(char *key, void *val){
 
-	if (datalen < MAX_DATA){
+	if (len < MAX_DATA){
 		ixev_get(key);
-	} else {
+	} else if (strncmp(key, "testkeya", 8) == 0){
 		printf("DEBUG: finished writing, exiting..\n");
 		free(val);
 	}
@@ -109,12 +109,12 @@ int main(int argc, char *argv[]){
 	}
 
 	val = malloc(MAX_DATA);
-
-	datalen = 0;
-	datalen += append_data(val, "data data data", datalen);
+	len = 0;
+	
+	len += append_data(val, "data data data", len);
 
 	// since these are dummy calls, for now don't need callbacks/handlers
-	ixev_put(key1, val, datalen);
+	ixev_put(key1, val, len);
 
 	//TODO: test delete...?
 	//ixev_delete(ctx, key);
