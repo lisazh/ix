@@ -60,7 +60,7 @@ struct index_ent *get_index_ent(const char *key){
 			}
 		}
 		if (!ret->next && strncmp(ret->key, key, strlen(key)) != 0){
-			//TODO: error handling, key not found
+			//TODO: proper error handling, key not found
 			return NULL;
 		}
 	}
@@ -86,13 +86,47 @@ uint64_t calc_numblks(ssize_t data_len){
 struct index_ent *new_index_ent(const char *key){
 	struct index_ent *ret = malloc(sizeof(struct index_ent));
 	memset(ret->key, '\0', MAX_KEY_LEN);
-	//ret->key = {0};
 	strncpy(ret->key, key, strlen(key));
 
 	return ret;
 }
 
+void update_index(struct index_ent *meta){
+	char *key = meta->key;
 
+	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
+	struct index_ent *oldent = indx[hashval];
+	if (oldent != NULL){
+		if (strncmp(oldent->key, key, strlen(key)) != 0){
+			struct index_ent *prev = oldent;
+			oldent = oldent->next;
+			while(oldent){
+				if (strncmp(oldent->key, key, strlen(key)) == 0){
+					break;
+				}
+				prev = oldent;
+				oldent = oldent->next;
+			}
+			// either oldent == NULL or oldent->key == key
+			if (!oldent){
+				prev->next = meta;
+				return;
+			}
+		} else { //swap
+			indx[hashval] = meta;
+		}
+		// clean up oldent
+		free_blk(oldent->lba, calc_numblks(oldent->val_len));
+		meta->next = oldent->next;
+		free(oldent);
+
+	} else { //key not already in index
+		printf("DEBUG: inserting key %s with hash %lu\n", key, hashval);
+		indx[hashval] = meta;
+	}
+}
+
+/*
 void update_index(struct index_ent *meta){
 	char *key = meta->key;
 
@@ -101,9 +135,9 @@ void update_index(struct index_ent *meta){
 	if (oldent != NULL){ //need to assume that pointer is either null or a valid entry..
 		if (strncmp(oldent->key, key, strlen(key)) == 0){
 			//simple swap
+			free_blk(oldent->lba, calc_numblks(oldent->val_len));
 			meta->next = oldent->next;
 			indx[hashval] = meta;
-			//free(oldent->key);
 			free(oldent);
 		} else { //traverse hash chain..
 			struct index_ent *tmp = oldent->next;
@@ -126,6 +160,8 @@ void update_index(struct index_ent *meta){
 		indx[hashval] = meta;
 	}
 }
+
+*/
 
 /* DEPRECATED
  * Handles insertion of a key
@@ -182,6 +218,7 @@ struct index_ent *insert_key(char *key, ssize_t val_len){
  * Do not use for updates
  * TODO: possible refactoring needed bottom half bit untidy
 */
+
 /*
 void delete_key(char *key){
 
@@ -231,16 +268,9 @@ void delete_key(char *key){
  * TODO: scan (per cpu partition?) of storage structure and populate indexes
  */
 void index_init(){
-	//indx = malloc((sizeof(struct index_ent) * MAX_ENTRIES)); //TODO: ???use appropriate "memory" allocation
-	/*
+
 	for (int i = 0; i < MAX_ENTRIES; i++){
-		indx[i].key = NULL;
-		indx[i].metadata = NULL;
-		indx[i].next = NULL;
-	}
-	*/
-	for (int i = 0; i < MAX_ENTRIES; i++){
-		indx[i] = NULL; //initialize to null-pointers..
+		indx[i] = NULL; 
 	}
 	//LTODO: scan through device and update freelist appropriately..
 	//LTODO: remember to add crc checks while scanning from device..

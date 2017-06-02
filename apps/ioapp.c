@@ -16,7 +16,7 @@
 
 #include <ixev.h>
 
-#define MAX_DATA 50
+#define MAX_DATA 1024
 
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
@@ -35,7 +35,10 @@ struct ixev_conn_ops conn_ops = {
 };
 
 
-static int datalen;
+
+char key1[] = "testkey1";
+char key2[] = "testkeya";
+static int len;
 static char *val;
 /* 
  * dummy helper function to add to data 
@@ -51,19 +54,16 @@ int append_data(char *buf, const char *datum, int currlen){
 
 
 // TODO for later testing for kernel side event-firing..
-static void get_handler(char *key, void *data, size_t len){
-	/*
-	char *val = malloc(len + 1);
-	memcpy(val, data, len);
-	val[len] = '\0';
-	printf("Value read was %s\n", val);
-	free(val);
-	*/
+static void get_handler(char *key, void *data, size_t datalen){
 	ixev_get_done(data);
 	//assert(len==datalen);
-	if (datalen < MAX_DATA && strncmp(key, "testkey", 7) == 0){
-		datalen += append_data(val, "\nmore data..", len);
-		ixev_put(key, val, datalen);
+	if (datalen < (MAX_DATA/2) && strncmp(key, "testkey1", 8) == 0){
+		len += append_data(val, " & more data", datalen);
+		ixev_put(key, val, len);
+	} else if (datalen < MAX_DATA && strncmp(key, "testkey1", 8) == 0){
+		len += append_data(val, " & more data", datalen);
+		ixev_put(key1, val, len);
+		ixev_put(key2, val, len/2);
 	} else {
 		return;
 	}
@@ -72,7 +72,7 @@ static void get_handler(char *key, void *data, size_t len){
 
 static void put_handler(char *key, void *val){
 
-	if (datalen < MAX_DATA && strncmp(key, "testkey", 7) == 0){
+	if (datalen < MAX_DATA){
 		ixev_get(key);
 	} else {
 		printf("DEBUG: finished writing, exiting..\n");
@@ -108,14 +108,13 @@ int main(int argc, char *argv[]){
 		exit(ret);
 	}
 
-	char key[] = "testkey";
 	val = malloc(MAX_DATA);
 
 	datalen = 0;
-	datalen += append_data(val, "data", datalen);
+	datalen += append_data(val, "data data data", datalen);
 
 	// since these are dummy calls, for now don't need callbacks/handlers
-	ixev_put(key, val, datalen);
+	ixev_put(key1, val, datalen);
 
 	//TODO: test delete...?
 	//ixev_delete(ctx, key);

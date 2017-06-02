@@ -151,7 +151,7 @@ ssize_t bsys_io_write_flush(){
 		}
 	}
 	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
-	printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
+	printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", iobuf->currind, startlba, iobuf->numblks);
 	//LTODO: add delays..
 	io_write_cb();
 
