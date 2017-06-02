@@ -21,7 +21,7 @@
 #define DEVBLK_SIZE 1000000 // reasonable approximation of an erase block..
 //#define MAX_BATCH (DEVBLK_SIZE/LBA_SIZE) //LTODO move LBA_SIZE def from somewhere else 
 #define MAX_BATCH 8 //FOR TESTING FIX LATER
-#define SG_MULT 2 //number of sg entries needed per write (LTODO change to 3 eventually)
+#define SG_MULT 3 //number of sg entries needed per write (LTODO change to 3 eventually)
 // LTODO: for each write need 3 entries: meta, data, zeros ()
 									 
 
@@ -31,10 +31,11 @@ struct ibuf{
 	struct index_ent *currbatch[MAX_BATCH];
 	char *usrkeys[MAX_BATCH];
 	int32_t currind;
-
 };
 
-static struct ibuf *iobuf; //LTODO: initialize somewhere...
+static struct ibuf *iobuf;
+
+static char zerobuf[LBA_SIZE] = {0};
 
 int blkio_init(void) {
 
@@ -52,7 +53,6 @@ int blkio_init(void) {
 }
 
 ssize_t bsys_io_read(char *key){
-	//FIXME: map key to LBAs
 	struct index_ent *ent = get_index_ent(key);
 	if (!ent)
 		return -1;
@@ -60,18 +60,18 @@ ssize_t bsys_io_read(char *key){
 	//printf("DEBUG: about to read lba %ld for %lu blocks\n", ent->lba, ent->lba_count);
 	
 	uint64_t numblks = calc_numblks(ent->val_len);
+
 	//Add this in a timer event
 	struct mbuf *buff = dummy_dev_read(ent->lba, numblks);
-	void * iomap_addr = mbuf_to_iomap(buff, mbuf_mtod(buff, void *));
-	
-	//LTODO: delays
-	//LTODO: need to package params to callback into one structure..
-	io_read_cb(key, iomap_addr, buff->len);
+	void *iomap_addr = mbuf_to_iomap(buff, mbuf_mtod(buff, void *));
+
+	//LTODO: add delays 
+	//LTODO: need to package params to callback into one structure..?
+	io_read_cb(key, (iomap_addr + META_SZ), ent->val_len);
 	return 0;
 }
 
 ssize_t bsys_io_write(char *key, void *val, size_t len){
-	//FIXME: decide where to write
 
 	printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
 
@@ -80,8 +80,9 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	newdata->crc = crc_data((uint8_t *)val, len);
 	
 	//printf("DEBUG: new metadata entry at %p with key %s at %p\n", (void *)newdata, newdata->key, (void *) newdata->key);
-	//printf("DEBUG: size of metadata structure is %d\n", sizeof(struct index_ent));
-	printf("DEBUG: sanity check metadata entry for key %s and val length %lu\n", newdata->key, newdata->val_len);
+	printf("DEBUG: size of metadata structure is %d\n", sizeof(struct index_ent));
+	printf("DEBUG: size of next pointer is %d\n", sizeof(struct index_ent *));
+	//printf("DEBUG: sanity check metadata entry for key %s and val length %lu\n", newdata->key, newdata->val_len);
 
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
@@ -91,6 +92,11 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	iobuf->buf[currind*SG_MULT + 1].base = val;
 	iobuf->buf[currind*SG_MULT + 1].len = len;
+
+	int numzeros = (len > DATA_SZ) ? LBA_SIZE - ((len - DATA_SZ) % LBA_SIZE) : (DATA_SZ - len);
+
+	iobuf->buf[currind*SG_MULT + 2].base = zerobuf;
+	iobuf->buf[currind*SG_MULT + 2].len = numzeros;
 	
 	//TODO: zeros here ()
 
@@ -117,11 +123,15 @@ void debugprint_sg(){
 	}
 }
 
-//flush batched writes to device..
+// flush batched writes to device..
+// TODO: return value..? what should it be..
 ssize_t bsys_io_write_flush(){
 
-	printf("DEBUG: about to issue writes\n");
-	debugprint_sg();
+	if (!iobuf->numblks){ //check if there's anything to write
+		printf("DEBUG: no batched writes to issue\n");
+		return 0;
+	}
+	//debugprint_sg();
 	uint64_t startlba = get_blk(iobuf->numblks);
 	//uint64_t ret = iobuf->numblks;
 
@@ -192,7 +202,6 @@ void io_write_cb(){
 // TODO: unpack key, address and length from param
 void io_read_cb(char *key, void *addr, size_t len){
 	usys_io_read(key, addr, len);
-
 }
 
 	

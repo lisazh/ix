@@ -44,7 +44,7 @@ static int datalen;
 int append_data(char *buf, const char *datum, int currlen){
 	int ret = strlen(datum);
 	if (currlen + ret > MAX_DATA){
-		fprintf(stderr, "Cannot copy, exceeded max data size");
+		fprintf(stderr, "Cannot copy, exceeded max data size\n");
 		return 0;
 
 	}
@@ -55,6 +55,12 @@ int append_data(char *buf, const char *datum, int currlen){
 
 // TODO for later testing for kernel side event-firing..
 static void get_handler(char *key, void *data, size_t len){
+
+	char *val = malloc(len + 1);
+	memcpy(val, data, len);
+	val[len] = '\0'
+	printf("Value read was %s\n", val);
+	free(val);
 	ixev_get_done(data);
 	//assert(len==datalen);
 	if (datalen < MAX_DATA && strncmp(key, "testkey", 7) == 0){

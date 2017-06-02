@@ -8,14 +8,14 @@
 #include <ix/dummy_dev.h>
 #include <ix/compiler.h>
 
-#define MAX_ENTRIES 8 //dummy for now, eventually will need to decide how big we want index to be..
+#define MAX_ENTRIES 1024 //dummy for now, eventually will need to decide how big we want index to be..
  						// NOTE also what is this number in relation to # of (per-core) LBAs?
 
 //#define LBA_SIZE 512 //TODO: this is defined in dummy_dev.h
-#define MAX_LBA_NUM 100000 //TODO: THIS IS TEMPORARY...
+#define MAX_LBA_NUM 100000 //TODO: THIS IS TEMPORARY...need to determine real value..
 #define MAX_KEY_LEN 110
 // ideally want key length + rest of metadata no more than 128 bytes (1/4 of a block)
-#define META_SZ 144/8 //size of metadata in bytes LTODO: find less hardcode-y way to determine
+#define META_SZ (144/8) + MAX_KEY_LEN //size of metadata in bytes LTODO: find less hardcode-y way to determine
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
 /*
