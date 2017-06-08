@@ -9,11 +9,17 @@
 #include <stdio.h> //for testing only..
 #include <ix/city.h>
 #include <ix/blk.h>
+#include <ix/mbuf.h>
 
 // for CRC
 #define CRC_POLYNOM 0x1021
 #define CRC_WIDTH 16
 #define CRC_TOPBIT (1 << (CRC_WIDTH - 1)) 
+
+
+#define SCAN_BATCH (MBUF_DATA_LEN/LBA_SIZE)
+
+static int blks_read; //needs to be global..better to be static..
 
 // wrapper function, in case we decide to change the hash...
 uint64_t hashkey(const char *key, size_t keylen){
@@ -266,6 +272,44 @@ void delete_key(char *key){
 }
 */
 
+
+void init_cb(void *arg){
+	struct index_ent *ent = malloc(sizeof(struct index_ent));	
+	memcpy(ent, arg, META_SZ);
+
+	if (ent->key){
+
+		assert(ent->val_len > 0);
+			
+		uint64_t blks = calc_numblks(ent->val_len);
+		uint16_t tocheck_crc;
+
+		//LTODO: anything else to check for the data...?
+		if (ent->val_len > DATA_SZ){
+
+			char *buf = malloc(LBA_SIZE * blks));
+			dummy_dev_read(buf, blk_read, blks, NULL, NULL); //LTODO: probs can't pass null in for cb
+			tocheck_crc = crc_data((buf + META_SZ), ent->val_len));
+	
+			free(buf);
+
+		} else {
+			tocheck_crc = crc_data((arg + META_SZ), ent->val_len);
+		}
+
+		assert(ent->crc, tocheck_crc);
+		update_index(ent);
+		alloc_block(ent->lba, blks);
+		blk_read += blks;
+
+	} else { //an empty block..? not sure how to handle the case w/ garbage data or smthg..
+		free(ent);
+		blk_read++; //skip to next block..
+	}
+
+}
+
+
 /* 
  * TODO: scan (per cpu partition?) of storage structure and populate indexes
  */
@@ -274,8 +318,56 @@ void index_init(){
 	for (int i = 0; i < MAX_ENTRIES; i++){
 		indx[i] = NULL; 
 	}
-	//LTODO: scan through device and update freelist appropriately..
-	//LTODO: remember to add crc checks while scanning from device..
+
+	blks_read = 0; //this is both the number of blks scanned so far and the current LBA..
+
+	char *buf = malloc(LBA_SIZE);
+
+	while(blks_read < MAX_LBA_NUM){
+		struct index_ent *ent = malloc(sizeof(struct index_ent));
+		dummy_dev_read(buf, blks_read, 1, init_cb, buf);		
+	}
+
+	free(buf);
+
+
+	//LTODO: scan in batches..? what's an acceptable mem size
+	// alternatively scan only per-cpu amount
+	/*
+	int indx_ind = 0;
+
+	struct mbuf *buf = mbuf_alloc_local();
+	char *data = 
+	for (int i = 0; i < ((MAX_LBA_NUM + SCAN_BATCH - 1)/SCAN_BATCH); i++)
+	{
+		struct mbuf *buf = dummy_dev_read(0, SCAN_BATCH);
+		int len = buf->len;
+
+		struct index_ent *ent = malloc(sizeof (struct index_ent));
+		struct tmp = buf;
+		while (len > 0){
+			memcpy(ent, tmp, META_SZ);
+			if (!ent->key){
+				len += LBA_SIZE;
+			} else {
+				assert(ent->val_len > 0);
+				assert(ent->crc == crc_data((tmp+META_SZ), ent->val_len))
+				assert(*(tmp + META_SZ + val_len) == '\0')); //check data 
+
+				//need to do index insertions...
+				struct index_ent tmp = ent;
+				indx[indx_ind++] = tmp;
+
+				len += META_SZ + (calc_numblks(ent->val_len) * DATA_SZ);
+
+			}
+
+		}
+
+	}
+	*/
+
+	//free buf
 	
 }
 

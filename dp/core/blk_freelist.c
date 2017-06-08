@@ -25,6 +25,41 @@ struct freelist_ent { //TODO: keep this internal to this file..?
 static struct freelist_ent *freelist;
 //static struct freelist_ent *freelist[NUM_SZ_CLASS];
 
+
+void alloc_block(uint64_t lba, uint64_t lba_count){
+	struct freelist_ent ent = freelist;
+
+
+	while (ent->next){
+		if (ent->start_lba <= lba && (ent->start_lba + ent->lba_count) > lba)
+			break;
+
+		ent = ent->next;
+	}
+
+	assert((ent->start_lba + ent->lba_count) > (lba + lba_count)) //allocation needs to be within the freelist entry
+
+	if (ent->start_lba == lba){
+		ent->start_lba += lba_count;
+		ent->lba_count -= lba_count;
+	} else { //need to split the entry
+
+		struct freelist_ent *newent = malloc(sizeof(struct freelist_ent));
+		newent->start_lba = (lba + lba_count);
+		newent->lba_count = ent->lba_count - lba_count;
+
+		freelist_ent *tmp = ent->next;
+		ent->lba_count = lba - ent->start_lba;
+		ent->next = newent;
+		newent->next = tmp;
+
+	}
+
+
+
+
+}
+
 void mark_used_blk(struct freelist_ent *ent, uint64_t num_blks){
 
 	if (num_blks < ent->lba_count){

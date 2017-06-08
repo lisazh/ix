@@ -13,8 +13,6 @@
 
 #include <assert.h>
 
-#define STORAGE_SIZE 8*1024*1024
-
 static struct mempool_datastore timer_datastore;
 static DEFINE_PERCPU(struct mempool, timer_mempool);
 static DEFINE_PERCPU(char *, dummy_dev);

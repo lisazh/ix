@@ -27,7 +27,7 @@
 #define MAX_PENDING_REQ 1024
 
 void io_read_cb(void *arg);
-void io_write_cb(void *arg);
+void io_write_cb(void *unused);
 
 struct ibuf{
 	struct sg_entry buf[MAX_BATCH*SG_MULT]; 
@@ -206,7 +206,7 @@ ssize_t bsys_io_read_done(void *addr)
  * Updates in-memory indexes 
  * LTODO: what to pass in?
  */
-void io_write_cb(void *unsed){
+void io_write_cb(void *unused){
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	//TODO: check status/error codes on completion..? or just assume always returns ok
 
@@ -241,6 +241,6 @@ void io_read_cb(void *arg)
 {
 	struct pending_req *rq = (struct pending_req *)arg;
 
-	usys_io_read(rq->key, rq->ents[0].base, rq->len);
+	usys_io_read(rq->key, rq->ents[0].base, rq->len); //FIXME what if val longer..? 
 	mempool_free(&percpu_get(pending_req_mempool), rq);
 }

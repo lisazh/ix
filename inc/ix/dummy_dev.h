@@ -5,6 +5,7 @@
 #include <ix/syscall.h>
 
 #define LBA_SIZE 512
+#define STORAGE_SIZE 8*1024*1024
 
 typedef void (*io_cb_t)(void *);
 
