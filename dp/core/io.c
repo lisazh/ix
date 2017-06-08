@@ -37,16 +37,15 @@ struct ibuf{
 	int32_t currind;
 };
 
-static struct ibuf *iobuf;
-
+static DEFINE_PERCPU(struct ibuf, batch_buf);
 static char zerobuf[LBA_SIZE] = {0};
 
 int blkio_init(void) {
 
+	struct ibuf *iobuf = &percpu_get(batch_buf);
 	freelist_init(); //LTODO: this involves malloc
 	index_init();
 
-	iobuf = malloc(sizeof(struct ibuf)); //LTODO: use mempools
 	iobuf->numblks = 0;
 	iobuf->currind = 0;
 	for (int i = 0; i < MAX_BATCH; i++){
@@ -79,6 +78,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
 
+	struct ibuf *iobuf = &percpu_get(batch_buf);
 	struct index_ent *newdata = new_index_ent(key);
 	newdata->val_len = len;
 	newdata->crc = crc_data((uint8_t *)val, len);
@@ -119,6 +119,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 }
 
 void debugprint_sg(){
+	struct ibuf *iobuf = &percpu_get(batch_buf);
 	for (int i = 0; i < iobuf->currind; i++){
 
 		printf("DEBUG: metadata at %p\n", iobuf->currbatch[i]);
@@ -131,6 +132,7 @@ void debugprint_sg(){
 // flush batched writes to device..
 // TODO: return value..? what should it be..
 ssize_t bsys_io_write_flush(){
+	struct ibuf *iobuf = &percpu_get(batch_buf);
 
 	if (!iobuf->numblks){ //check if there's anything to write
 		printf("DEBUG: no batched writes to issue\n");
@@ -175,6 +177,7 @@ ssize_t bsys_io_read_done(void *addr)
  */
 void io_write_cb(){
 
+	struct ibuf *iobuf = &percpu_get(batch_buf);
 	//TODO: check status/error codes on completion..? or just assume always returns ok
 
 	// update metadata & free all interim metadata
