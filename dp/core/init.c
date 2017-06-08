@@ -74,6 +74,7 @@ extern int mempool_init(void);
 extern int init_migration_cpu(void);
 extern int dpdk_init(void);
 extern int dummy_dev_init(void);
+extern int dummy_dev_init_cpu(void);
 extern int blkio_init(void);
 extern int blkio_init_cpu(void);
 
@@ -100,7 +101,7 @@ static struct init_vector_t init_tbl[] = {
 	{ "ethdev",  init_ethdev,  NULL, NULL},
 	{ "migration", NULL, init_migration_cpu, NULL},
 	{ "io", blkio_init, blkio_init_cpu, NULL},
-	{ "dummy_dev", NULL, dummy_dev_init, NULL},
+	{ "dummy_dev", dummy_dev_init, dummy_dev_init_cpu, NULL},
 	{ "hw",      init_hw,      NULL, NULL},               // spaws per-cpu init sequence
 	{ "syscall", NULL,         syscall_init_cpu, NULL},
 #ifdef ENABLE_KSTATS

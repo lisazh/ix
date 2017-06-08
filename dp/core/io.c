@@ -13,7 +13,6 @@
 #include <ix/cfg.h>
 #include <ix/dummy_dev.h>
 #include <ix/blk.h>
-#include <ix/timer.h>
 #include <ix/mempool.h>
 
 #include <stdio.h>
@@ -42,8 +41,6 @@ struct pending_req {
 	char *key;
 	size_t len;
 	struct sg_entry ents[READ_BATCH];
-	struct timer t;
-	io_cb_t cb; // Just a hack for IX timers
 };
 
 static DEFINE_PERCPU(struct ibuf, batch_buf);
@@ -164,7 +161,6 @@ void debugprint_sg(){
 // TODO: return value..? what should it be..
 ssize_t bsys_io_write_flush()
 {
-	struct pending_req *pr;
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 
 	if (!iobuf->numblks){ //check if there's anything to write
@@ -185,12 +181,10 @@ ssize_t bsys_io_write_flush()
 			}
 		}
 	}
-	pr = mempool_alloc(&percpu_get(pending_req_mempool));
+
 	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba,
-			iobuf->numblks, io_write_cb, pr);
+			iobuf->numblks, io_write_cb, NULL);
 	printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", iobuf->currind, startlba, iobuf->numblks);
-	//LTODO: add delays..
-	io_write_cb(NULL);
 
 	return 0;
 }
