@@ -13,6 +13,5 @@ int dummy_dev_write(void *payload, uint64_t lba, uint64_t lba_count,
 		io_cb_t cb, void *arg);
 int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 		uint64_t lba_count, io_cb_t cb, void *arg);
-struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count, io_cb_t cb,
+int dummy_dev_read(void *payload, uint64_t lba, uint64_t lba_count, io_cb_t cb,
 		void *arg);
-void dummy_dev_read_done(void *data);

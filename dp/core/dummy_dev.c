@@ -21,6 +21,7 @@ static DEFINE_PERCPU(char *, dummy_dev);
 
 #define MAX_PENDING_TIMERS 1024
 #define WRITE_DELAY 500
+#define READ_DELAY 100
 
 struct io_timer {
 	struct timer t;
@@ -89,17 +90,21 @@ int dummy_dev_write(void *payload, uint64_t lba, uint64_t lba_count,
 	return 0;
 }
 
-struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count, io_cb_t cb, 
+int dummy_dev_read(void *payload, uint64_t lba, uint64_t lba_count, io_cb_t cb, 
 		void *arg)
 {
-	assert(lba_count <= MBUF_DATA_LEN / LBA_SIZE);
+	struct io_timer *iot;
+	memcpy(payload, &percpu_get(dummy_dev)[lba * LBA_SIZE], lba_count * LBA_SIZE);
 
-	struct mbuf *read_mbuf = mbuf_alloc_local();
-	char *data = mbuf_mtod(read_mbuf, char *);
-	memcpy(data, &percpu_get(dummy_dev)[lba * LBA_SIZE], lba_count * LBA_SIZE);
-	read_mbuf->len = lba_count * LBA_SIZE;
+	iot = mempool_alloc(&percpu_get(timer_mempool));
+	assert(iot);
+	iot->cb = cb;
+	iot->arg = arg;
 
-	return read_mbuf;
+	timer_init_entry(&iot->t, generic_io_handler);
+	timer_add(&iot->t, NULL, READ_DELAY);
+
+	return 0;
 }
 
 int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
@@ -124,11 +129,4 @@ int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 	timer_add(&iot->t, NULL, WRITE_DELAY);
 
 	return 0;
-}
-
-void dummy_dev_read_done(void *data)
-{
-	printf("Freeing mbuf\n");
-	struct mbuf *b = (struct mbuf *)((uintptr_t) data - MBUF_HEADER_LEN);
-	mbuf_free(b);
 }

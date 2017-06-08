@@ -87,18 +87,19 @@ ssize_t bsys_io_read(char *key){
 	
 	uint64_t numblks = calc_numblks(ent->val_len);
 
+	// Allocate buffer for read
+	assert(numblks <= MBUF_DATA_LEN / LBA_SIZE);
+	struct mbuf *read_mbuf = mbuf_alloc_local();
+	char *data = mbuf_mtod(read_mbuf, char *);
+	read_mbuf->len = numblks * LBA_SIZE;
+
 	pr = mempool_alloc(&percpu_get(pending_req_mempool));
 	pr->key = key;
 	pr->len = ent->val_len;
+	pr->ents[0].base = mbuf_to_iomap(read_mbuf, mbuf_mtod(read_mbuf, void *));
 
-	struct mbuf *buff = dummy_dev_read(ent->lba, numblks, io_read_cb, pr);
-	void *iomap_addr = mbuf_to_iomap(buff, mbuf_mtod(buff, void *));
+	dummy_dev_read(data, ent->lba, numblks, io_read_cb, pr);
 
-	//LTODO: add delays 
-	//LTODO: need to package params to callback into one structure..?
-	//io_read_cb(key, (iomap_addr + META_SZ), ent->val_len);
-	pr->ents[0].base = iomap_addr;
-	io_read_cb(pr);
 	return 0;
 }
 
@@ -196,7 +197,8 @@ ssize_t bsys_io_read_done(void *addr)
 {
 	//printf("DEBUG: read done at address %p\n", addr);
 	void *kaddr = iomap_to_mbuf(&percpu_get(mbuf_mempool), addr);
-	dummy_dev_read_done(kaddr);
+	struct mbuf *b = (struct mbuf *)((uintptr_t) kaddr - MBUF_HEADER_LEN);
+	mbuf_free(b);
 	return 0;
 }
 
