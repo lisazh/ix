@@ -13,7 +13,8 @@
 #include <ix/cfg.h>
 #include <ix/dummy_dev.h>
 #include <ix/blk.h>
-
+#include <ix/timer.h>
+#include <ix/mempool.h>
 
 #include <stdio.h>
 
@@ -23,11 +24,11 @@
 #define MAX_BATCH 8 //FOR TESTING FIX LATER
 #define SG_MULT 3 //number of sg entries needed per write (LTODO change to 3 eventually)
 // LTODO: for each write need 3 entries: meta, data, zeros ()
-									 
-void io_read_cb(char *key, void *addr, size_t len);
-void io_write_cb();
+#define READ_BATCH 8 // number of buffers per read - 2KB per buffer
+#define MAX_PENDING_REQ 1024
 
-
+void io_read_cb(void *arg);
+void io_write_cb(void *arg);
 
 struct ibuf{
 	struct sg_entry buf[MAX_BATCH*SG_MULT]; 
@@ -37,11 +38,28 @@ struct ibuf{
 	int32_t currind;
 };
 
+struct pending_req {
+	char *key;
+	size_t len;
+	struct sg_entry ents[READ_BATCH];
+	struct timer t;
+};
+
 static DEFINE_PERCPU(struct ibuf, batch_buf);
+static DEFINE_PERCPU(struct mempool, pending_req_mempool);
+static struct mempool_datastore pending_req_datastore;
 static char zerobuf[LBA_SIZE] = {0};
 
-int blkio_init(void) {
+int blkio_init(void)
+{
+	int ret;
+	ret = mempool_create_datastore(&pending_req_datastore, 32*MAX_PENDING_REQ,
+				       sizeof(struct pending_req), 0, MEMPOOL_DEFAULT_CHUNKSIZE, "pending_req");
+	return ret;
+}
 
+int blkio_init_cpu(void)
+{
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	freelist_init(); //LTODO: this involves malloc
 	index_init();
@@ -52,10 +70,17 @@ int blkio_init(void) {
 		iobuf->currbatch[i] = NULL; //initialize pointers..
 		iobuf->usrkeys[i] = NULL;
 	}
+	int ret;
+	ret = mempool_create(&percpu_get(pending_req_mempool), 
+			&pending_req_datastore, MEMPOOL_SANITY_PERCPU, percpu_get(cpu_id));
+	if (ret)
+		return ret;
+
 	return 0;
 }
 
 ssize_t bsys_io_read(char *key){
+	struct pending_req *pr;
 	struct index_ent *ent = get_index_ent(key);
 	if (!ent)
 		return -1;
@@ -70,7 +95,12 @@ ssize_t bsys_io_read(char *key){
 
 	//LTODO: add delays 
 	//LTODO: need to package params to callback into one structure..?
-	io_read_cb(key, (iomap_addr + META_SZ), ent->val_len);
+	//io_read_cb(key, (iomap_addr + META_SZ), ent->val_len);
+	pr = mempool_alloc(&percpu_get(pending_req_mempool));
+	pr->key = key;
+	pr->len = ent->val_len;
+	pr->ents[0].base = iomap_addr;
+	io_read_cb(pr);
 	return 0;
 }
 
@@ -155,7 +185,7 @@ ssize_t bsys_io_write_flush(){
 	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
 	printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", iobuf->currind, startlba, iobuf->numblks);
 	//LTODO: add delays..
-	io_write_cb();
+	io_write_cb(NULL);
 
 	return 0;
 }
@@ -175,8 +205,7 @@ ssize_t bsys_io_read_done(void *addr)
  * Updates in-memory indexes 
  * LTODO: what to pass in?
  */
-void io_write_cb(){
-
+void io_write_cb(void *unsed){
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	//TODO: check status/error codes on completion..? or just assume always returns ok
 
@@ -204,12 +233,13 @@ void io_write_cb(){
 	//reset variables
 	iobuf->currind = 0;
 	iobuf->numblks = 0;
-	
 }
 
 // TODO: unpack key, address and length from param
-void io_read_cb(char *key, void *addr, size_t len){
-	usys_io_read(key, addr, len);
-}
+void io_read_cb(void *arg)
+{
+	struct pending_req *rq = (struct pending_req *)arg;
 
-	
+	usys_io_read(rq->key, rq->ents[0].base, rq->len);
+	mempool_free(&percpu_get(pending_req_mempool), rq);
+}

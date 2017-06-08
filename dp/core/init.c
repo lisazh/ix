@@ -75,6 +75,7 @@ extern int init_migration_cpu(void);
 extern int dpdk_init(void);
 extern int dummy_dev_init(void);
 extern int blkio_init(void);
+extern int blkio_init_cpu(void);
 
 struct init_vector_t {
 	const char *name;
@@ -98,14 +99,14 @@ static struct init_vector_t init_tbl[] = {
 	{ "tcpapi",  tcp_api_init, tcp_api_init_cpu, NULL},
 	{ "ethdev",  init_ethdev,  NULL, NULL},
 	{ "migration", NULL, init_migration_cpu, NULL},
+	{ "io", blkio_init, blkio_init_cpu, NULL},
+	{ "dummy_dev", NULL, dummy_dev_init, NULL},
 	{ "hw",      init_hw,      NULL, NULL},               // spaws per-cpu init sequence
 	{ "syscall", NULL,         syscall_init_cpu, NULL},
 #ifdef ENABLE_KSTATS
 	{ "kstats",  NULL,         kstats_init_cpu, NULL},    // after timer
 #endif
 	{ "init-net", NULL,         init_network_cpu, NULL},  // FIXME should be split
-	{ "dummy_dev", NULL, dummy_dev_init, NULL},
-	{ "io", NULL, blkio_init, NULL},
 	{ NULL, NULL, NULL, NULL}
 };
 
