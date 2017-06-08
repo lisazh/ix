@@ -38,13 +38,15 @@ int dummy_dev_init(void)
 	return 0;
 }
 
-int dummy_dev_write(void *payload, uint64_t lba, uint64_t lba_count)
+int dummy_dev_write(void *payload, uint64_t lba, uint64_t lba_count,
+		io_cb_t cb, void *arg)
 {
 	memcpy(&percpu_get(dummy_dev)[lba * LBA_SIZE], payload, lba_count * LBA_SIZE);
 	return 0;
 }
 
-struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count)
+struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count, io_cb_t cb, 
+		void *arg)
 {
 	assert(lba_count <= MBUF_DATA_LEN / LBA_SIZE);
 
@@ -57,7 +59,7 @@ struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count)
 }
 
 int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
-		uint64_t lba_count)
+		uint64_t lba_count, io_cb_t cb, void *arg)
 {
 	int i, bytes_written = 0;
 

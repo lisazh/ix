@@ -43,6 +43,7 @@ struct pending_req {
 	size_t len;
 	struct sg_entry ents[READ_BATCH];
 	struct timer t;
+	io_cb_t cb; // Just a hack for IX timers
 };
 
 static DEFINE_PERCPU(struct ibuf, batch_buf);
@@ -89,16 +90,16 @@ ssize_t bsys_io_read(char *key){
 	
 	uint64_t numblks = calc_numblks(ent->val_len);
 
-	//Add this in a timer event
-	struct mbuf *buff = dummy_dev_read(ent->lba, numblks);
+	pr = mempool_alloc(&percpu_get(pending_req_mempool));
+	pr->key = key;
+	pr->len = ent->val_len;
+
+	struct mbuf *buff = dummy_dev_read(ent->lba, numblks, io_read_cb, pr);
 	void *iomap_addr = mbuf_to_iomap(buff, mbuf_mtod(buff, void *));
 
 	//LTODO: add delays 
 	//LTODO: need to package params to callback into one structure..?
 	//io_read_cb(key, (iomap_addr + META_SZ), ent->val_len);
-	pr = mempool_alloc(&percpu_get(pending_req_mempool));
-	pr->key = key;
-	pr->len = ent->val_len;
 	pr->ents[0].base = iomap_addr;
 	io_read_cb(pr);
 	return 0;
@@ -161,7 +162,9 @@ void debugprint_sg(){
 
 // flush batched writes to device..
 // TODO: return value..? what should it be..
-ssize_t bsys_io_write_flush(){
+ssize_t bsys_io_write_flush()
+{
+	struct pending_req *pr;
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 
 	if (!iobuf->numblks){ //check if there's anything to write
@@ -182,7 +185,9 @@ ssize_t bsys_io_write_flush(){
 			}
 		}
 	}
-	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba, iobuf->numblks);
+	pr = mempool_alloc(&percpu_get(pending_req_mempool));
+	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba,
+			iobuf->numblks, io_write_cb, pr);
 	printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", iobuf->currind, startlba, iobuf->numblks);
 	//LTODO: add delays..
 	io_write_cb(NULL);

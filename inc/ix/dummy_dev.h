@@ -6,9 +6,13 @@
 
 #define LBA_SIZE 512
 
+typedef void (*io_cb_t)(void *);
+
 int dummy_dev_init(void);
-int dummy_dev_write(void *payload, uint64_t lba, uint64_t lba_count);
+int dummy_dev_write(void *payload, uint64_t lba, uint64_t lba_count, 
+		io_cb_t cb, void *arg);
 int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
-		uint64_t lba_count);
-struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count);
+		uint64_t lba_count, io_cb_t cb, void *arg);
+struct mbuf *dummy_dev_read(uint64_t lba, uint64_t lba_count, io_cb_t cb,
+		void *arg);
 void dummy_dev_read_done(void *data);
