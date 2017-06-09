@@ -16,7 +16,7 @@
 
 #include <ixev.h>
 
-#define MAX_DATA 514
+#define MAX_DATA 128
 
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
@@ -114,7 +114,8 @@ int main(int argc, char *argv[]){
 	len += append_data(val, "data data data", len);
 
 	// since these are dummy calls, for now don't need callbacks/handlers
-	ixev_put(key1, val, len);
+	//ixev_put(key1, val, len);
+	ixev_get(key1);
 
 	//TODO: test delete...?
 	//ixev_delete(ctx, key);

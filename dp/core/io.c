@@ -113,6 +113,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	struct index_ent *newdata = new_index_ent(key, val, len);
+	
+	assert(newdata->magic == METAMAGIC);
 	//newdata->val_len = len;
 	//newdata->crc = crc_data((uint8_t *)val, len);
 	//newdata->version = get_version(key) + 1;
@@ -171,7 +173,7 @@ ssize_t bsys_io_write_flush()
 		printf("DEBUG: no batched writes to issue\n");
 		return 0;
 	}
-	//debugprint_sg();
+	debugprint_sg();
 	int startlba = get_blk(iobuf->numblks);
 	//uint64_t ret = iobuf->numblks;
 
@@ -210,6 +212,7 @@ ssize_t bsys_io_read_done(void *addr)
  * LTODO: what to pass in?
  */
 void io_write_cb(void *unused){
+	printf("DEBUG: reached callback\n");
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	//TODO: check status/error codes on completion..? or just assume always returns ok
 

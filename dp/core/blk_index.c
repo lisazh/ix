@@ -97,8 +97,9 @@ uint64_t calc_numblks(ssize_t data_len){
  * with metadata populated..
  *
  */
-struct index_ent *new_index_ent(const char *key, const void *val, const uint32_t len){
+struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t len){
 	struct index_ent *ret = malloc(sizeof(struct index_ent));
+	ret->magic = METAMAGIC;	
 	memset(ret->key, '\0', MAX_KEY_LEN);
 	strncpy(ret->key, key, strlen(key));
 
@@ -106,6 +107,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint32_t
 	ret->val_len = len;
 	ret->crc = crc_data((uint8_t *)val, len);
 	ret->version = get_version(key) + 1;
+	printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	return ret;
 }
 
@@ -182,7 +184,7 @@ void delete_key(char *key){
 		prev->next = oldent->next; //remove from chain
 	}
 
-	free_blk(oldent->lba, oldent->lba_count);
+	free_blk(oldent->lba, calc_numblks(oldent->val_len));
 	free(oldent);
 	indx[ind] = NULL; //safety
 
@@ -193,18 +195,21 @@ void delete_key(char *key){
 //TODO: actually need to make this read asynchronously..
 void init_cb(void *arg){
 	struct index_ent *ent = malloc(sizeof(struct index_ent));
-	memcpy(ent, arg, META_SZ);
+	//memset(ent, METAMAGIC, 2);
+	//memcpy(ent, arg, META_SZ);
 
-	printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
-
-	if (ent->magic == METAMAGIC){
-
+	//printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
+	uint16_t *tmp = (uint16_t *)arg;
+	//assert(ent->magic == METAMAGIC);
+	if (*tmp  == METAMAGIC){
+		memcpy(ent, arg, META_SZ);
+		printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
 		assert(ent->val_len > 0);
-
+	
 		uint64_t blks = calc_numblks(ent->val_len);
 		struct index_ent *tmp = get_index_ent(ent->key);
 		
-		if (tmp && tmp->version < ent->version){
+		if ((tmp && tmp->version < ent->version)|| tmp == NULL){
 			uint16_t tocheck_crc;
 
 			if (ent->val_len > DATA_SZ){
@@ -224,16 +229,16 @@ void init_cb(void *arg){
 			alloc_block(ent->lba, blks);
 			print_index();
 			print_freelist();
-			printf("DEBUG: Blocks so far is %lu\n", blks_read);
 		} else {
 			free(ent);
 		}
 		blks_read += blks; //even if we didn't keep the value, count it as read 
-
+		printf("DEBUG: Read %lu, blocks so far is %d\n", blks, blks_read);
+	
 	} else { //not sure how to handle the case w/ garbage data or smthg..
 		free(ent);
 		blks_read++; //skip to next block..
-		printf("DEBUG:Blocks so far is %lu\n", blks_read);
+		printf("DEBUG:Skipped, blocks so far is %d\n", blks_read);
 	}
 
 }
@@ -271,7 +276,7 @@ void index_init(){
 ///alternate version for asynchronous-ness
 void init_cb_cont(void *arg){
 
-	struct index_ent *ent = malloc(sizeof(index_ent));
+	struct index_ent *ent = malloc(sizeof(struct index_ent));
 	memcpy(ent, arg, META_SZ);
 
 

@@ -19,10 +19,10 @@
 #define META_SZ ((144/8) + MAX_KEY_LEN) //in bytes LTODO: find less hardcode-y way to determine
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
-#define METAMAGIC 0xD006
+#define METAMAGIC 0xd006
 
 struct index_ent {
-	int16_t magic = METAMAGIC; //magic value for ease checking..
+	uint16_t magic; //magic value for ease checking..
 	char key[MAX_KEY_LEN];
 	int32_t lba;
 	uint64_t val_len; //length of value in BYTES

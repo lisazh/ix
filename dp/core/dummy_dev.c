@@ -126,6 +126,7 @@ int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 
 	timer_init_entry(&iot->t, generic_io_handler);
 	timer_add(&iot->t, NULL, WRITE_DELAY);
-
+	
+	printf("DEBUG: added callback to timer..\n");
 	return 0;
 }
