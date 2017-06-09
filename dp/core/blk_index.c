@@ -277,6 +277,8 @@ void init_cb(void *arg){
 	struct index_ent *ent = malloc(sizeof(struct index_ent));	
 	memcpy(ent, arg, META_SZ);
 
+	printf("DEBUG: reading entries from device..key is %s\n", ent->key);
+
 	if (ent->key){
 
 		assert(ent->val_len > 0);
@@ -287,9 +289,9 @@ void init_cb(void *arg){
 		//LTODO: anything else to check for the data...?
 		if (ent->val_len > DATA_SZ){
 
-			char *buf = malloc(LBA_SIZE * blks));
-			dummy_dev_read(buf, blk_read, blks, NULL, NULL); //LTODO: probs can't pass null in for cb
-			tocheck_crc = crc_data((buf + META_SZ), ent->val_len));
+			char *buf = malloc(LBA_SIZE * blks);
+			dummy_dev_read(buf, blks_read, blks, NULL, NULL); //LTODO: probs can't pass null in for cb
+			tocheck_crc = crc_data((buf + META_SZ), ent->val_len);
 	
 			free(buf);
 
@@ -297,14 +299,14 @@ void init_cb(void *arg){
 			tocheck_crc = crc_data((arg + META_SZ), ent->val_len);
 		}
 
-		assert(ent->crc, tocheck_crc);
+		assert(ent->crc == tocheck_crc);
 		update_index(ent);
 		alloc_block(ent->lba, blks);
-		blk_read += blks;
+		blks_read += blks;
 
 	} else { //an empty block..? not sure how to handle the case w/ garbage data or smthg..
 		free(ent);
-		blk_read++; //skip to next block..
+		blks_read++; //skip to next block..
 	}
 
 }
@@ -326,6 +328,7 @@ void index_init(){
 	while(blks_read < MAX_LBA_NUM){
 		struct index_ent *ent = malloc(sizeof(struct index_ent));
 		dummy_dev_read(buf, blks_read, 1, init_cb, buf);		
+		printf("DEBUG: read %d blocks so far..\n", blks_read);
 	}
 
 	free(buf);

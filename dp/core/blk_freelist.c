@@ -27,7 +27,7 @@ static struct freelist_ent *freelist;
 
 
 void alloc_block(uint64_t lba, uint64_t lba_count){
-	struct freelist_ent ent = freelist;
+	struct freelist_ent *ent = freelist;
 
 
 	while (ent->next){
@@ -37,7 +37,7 @@ void alloc_block(uint64_t lba, uint64_t lba_count){
 		ent = ent->next;
 	}
 
-	assert((ent->start_lba + ent->lba_count) > (lba + lba_count)) //allocation needs to be within the freelist entry
+	assert((ent->start_lba + ent->lba_count) > (lba + lba_count)); //allocation needs to be within the freelist entry
 
 	if (ent->start_lba == lba){
 		ent->start_lba += lba_count;
@@ -48,7 +48,7 @@ void alloc_block(uint64_t lba, uint64_t lba_count){
 		newent->start_lba = (lba + lba_count);
 		newent->lba_count = ent->lba_count - lba_count;
 
-		freelist_ent *tmp = ent->next;
+		struct freelist_ent *tmp = ent->next;
 		ent->lba_count = lba - ent->start_lba;
 		ent->next = newent;
 		newent->next = tmp;
