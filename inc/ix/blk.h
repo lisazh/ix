@@ -19,13 +19,16 @@
 #define META_SZ ((144/8) + MAX_KEY_LEN) //in bytes LTODO: find less hardcode-y way to determine
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
+#define METAMAGIC 0xD006
+
 struct index_ent {
+	int16_t magic = METAMAGIC; //magic value for ease checking..
 	char key[MAX_KEY_LEN];
-	int64_t lba;
+	int32_t lba;
 	uint64_t val_len; //length of value in BYTES
 	//uint64_t lba_count;
 	uint16_t crc;
-	//LTODO: version?
+	uint16_t version;
 	struct index_ent *next; //for hash chaining..
 } __packed;
 
@@ -46,13 +49,15 @@ void freelist_init();
 void print_freelist(); //for debugging..
 
 /* index management */
-uint16_t crc_data(uint8_t msg[], size_t len);
+//uint16_t crc_data(uint8_t msg[], size_t len);
 
 uint64_t calc_numblks(ssize_t data_len);
 
 struct index_ent *get_index_ent(const char *key);
 
-struct index_ent *new_index_ent(const char *key);
+struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t len);
+
+//uint16_t get_version(const char *key);
 
 void update_index(struct index_ent *meta);
 

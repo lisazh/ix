@@ -112,9 +112,10 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
 
 	struct ibuf *iobuf = &percpu_get(batch_buf);
-	struct index_ent *newdata = new_index_ent(key);
-	newdata->val_len = len;
-	newdata->crc = crc_data((uint8_t *)val, len);
+	struct index_ent *newdata = new_index_ent(key, val, len);
+	//newdata->val_len = len;
+	//newdata->crc = crc_data((uint8_t *)val, len);
+	//newdata->version = get_version(key) + 1;
 	
 	//printf("DEBUG: new metadata entry at %p with key %s at %p\n", (void *)newdata, newdata->key, (void *) newdata->key);
 	//printf("DEBUG: size of metadata structure is %lu\n", sizeof(struct index_ent));
@@ -136,10 +137,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	iobuf->buf[currind*SG_MULT + 2].len = numzeros;
 		
 	//printf("DEBUG: writing %d (meta) + %d (data) + %d (zeros) bytes\n", META_SZ, len, numzeros);
-	//TODO: zeros here ()
 
 	iobuf->usrkeys[currind] = key;
-
 	iobuf->currind++;
 
 	/*
