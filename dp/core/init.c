@@ -100,8 +100,8 @@ static struct init_vector_t init_tbl[] = {
 	{ "tcpapi",  tcp_api_init, tcp_api_init_cpu, NULL},
 	{ "ethdev",  init_ethdev,  NULL, NULL},
 	{ "migration", NULL, init_migration_cpu, NULL},
-	{ "io", blkio_init, blkio_init_cpu, NULL},
 	{ "dummy_dev", dummy_dev_init, dummy_dev_init_cpu, NULL},
+	{ "io", blkio_init, blkio_init_cpu, NULL},
 	{ "hw",      init_hw,      NULL, NULL},               // spaws per-cpu init sequence
 	{ "syscall", NULL,         syscall_init_cpu, NULL},
 #ifdef ENABLE_KSTATS

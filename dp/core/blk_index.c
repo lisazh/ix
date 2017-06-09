@@ -19,7 +19,7 @@
 
 #define SCAN_BATCH (MBUF_DATA_LEN/LBA_SIZE)
 
-static int blks_read; //needs to be global..better to be static..
+int blks_read = 0; //needs to be global..better to be static..
 
 // wrapper function, in case we decide to change the hash...
 uint64_t hashkey(const char *key, size_t keylen){
@@ -123,8 +123,8 @@ void update_index(struct index_ent *meta){
 		}
 		// clean up oldent
 		free_blk(oldent->lba, calc_numblks(oldent->val_len));
-		printf("DEBUG: freeing LBA %d for %lu blocks\n", oldent->lba, calc_numblks(oldent->val_len));
-		print_freelist();
+		//printf("DEBUG: freeing LBA %d for %lu blocks\n", oldent->lba, calc_numblks(oldent->val_len));
+		//print_freelist();
 		meta->next = oldent->next;
 		free(oldent);
 
@@ -134,6 +134,18 @@ void update_index(struct index_ent *meta){
 	}
 }
 
+
+
+//FOR DEBUGGING ONLY
+void print_index(){
+	for (int i = 0; i < MAX_ENTRIES; i++){
+		if (indx[i]){
+			printf("Index entry for key %s, with value length %lu, at lba %lu\n", indx[i]->key, indx[i]->val_len, indx[i]->lba);
+
+		}
+	}
+
+}
 /*
 void update_index(struct index_ent *meta){
 	char *key = meta->key;
@@ -274,10 +286,11 @@ void delete_key(char *key){
 
 
 void init_cb(void *arg){
-	struct index_ent *ent = malloc(sizeof(struct index_ent));	
+	//struct index_ent *ent = (struct index_ent *)(arg);	
+	struct index_ent *ent = malloc(sizeof(struct index_ent));
 	memcpy(ent, arg, META_SZ);
 
-	printf("DEBUG: reading entries from device..key is %s\n", ent->key);
+	printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
 
 	if (ent->key){
 
@@ -303,10 +316,16 @@ void init_cb(void *arg){
 		update_index(ent);
 		alloc_block(ent->lba, blks);
 		blks_read += blks;
+		print_index();
+		print_freelist();
+		printf("DEBUG: Blocks so far is %lu\n", blks_read);
+
 
 	} else { //an empty block..? not sure how to handle the case w/ garbage data or smthg..
 		free(ent);
 		blks_read++; //skip to next block..
+	
+		printf("DEBUG:Blocks so far is %lu\n", blks_read);
 	}
 
 }
@@ -321,13 +340,16 @@ void index_init(){
 		indx[i] = NULL; 
 	}
 
-	blks_read = 0; //this is both the number of blks scanned so far and the current LBA..
-
+	//blks_read = 0; //this is both the number of blks scanned so far and the current LBA..
+	
+	printf("DEBUG: attempting to read from device..\n"); 
 	char *buf = malloc(LBA_SIZE);
-
+	
+	//printf("DEBUG: malloc'd buffer\n");
 	while(blks_read < MAX_LBA_NUM){
-		struct index_ent *ent = malloc(sizeof(struct index_ent));
-		dummy_dev_read(buf, blks_read, 1, init_cb, buf);		
+		//printf("DEBUG: about to issue read..\n");
+		dummy_dev_read(buf, blks_read, 1, NULL, NULL);		
+		init_cb(buf);
 		printf("DEBUG: read %d blocks so far..\n", blks_read);
 	}
 

@@ -50,6 +50,8 @@ static char zerobuf[LBA_SIZE] = {0};
 
 int blkio_init(void)
 {
+	
+	printf("DEBUG: initializing block stuff..\n");
 	int ret;
 	ret = mempool_create_datastore(&pending_req_datastore, 32*MAX_PENDING_REQ,
 				       sizeof(struct pending_req), 0, MEMPOOL_DEFAULT_CHUNKSIZE, "pending_req");
@@ -58,14 +60,16 @@ int blkio_init(void)
 
 int blkio_init_cpu(void)
 {
+	printf("DEBUG: initializing per cpu block stuff..\n");
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	freelist_init(); //LTODO: this involves malloc
 	index_init();
 
 	iobuf->numblks = 0;
 	iobuf->currind = 0;
+
 	for (int i = 0; i < MAX_BATCH; i++){
-		iobuf->currbatch[i] = NULL; //initialize pointers..
+		iobuf->currbatch[i] = NULL; //initialize pointers, for safety..
 		iobuf->usrkeys[i] = NULL;
 	}
 	int ret;

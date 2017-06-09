@@ -12,7 +12,7 @@
  						// NOTE also what is this number in relation to # of (per-core) LBAs?
 
 //#define LBA_SIZE 512 //this is defined in dummy_dev.h
-#define MAX_LBA_NUM (STORAGE_SIZE/LBA_SIZE) //TODO: THIS IS TEMPORARY...need to determine real value..
+#define MAX_LBA_NUM (STORAGE_SIZE/LBA_SIZE/32) //TODO: THIS IS TEMPORARY...need to determine real value..
 
 // ideally want key length + rest of metadata no more than 128 bytes (1/4 of a block)
 #define MAX_KEY_LEN 110

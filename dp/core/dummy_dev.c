@@ -91,6 +91,7 @@ int dummy_dev_write(void *payload, uint64_t lba, uint64_t lba_count,
 int dummy_dev_read(void *payload, uint64_t lba, uint64_t lba_count, io_cb_t cb, 
 		void *arg)
 {
+	//printf("DEBUG: about to issue read to lba %lu into %p\n", lba, payload);
 	struct io_timer *iot;
 	memcpy(payload, &percpu_get(dummy_dev)[lba * LBA_SIZE], lba_count * LBA_SIZE);
 
@@ -98,13 +99,13 @@ int dummy_dev_read(void *payload, uint64_t lba, uint64_t lba_count, io_cb_t cb,
 	assert(iot);
 	iot->cb = cb;
 	iot->arg = arg;
-
+	
 	timer_init_entry(&iot->t, generic_io_handler);
 	timer_add(&iot->t, NULL, READ_DELAY);
 
 	return 0;
 }
-
+	
 int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 		uint64_t lba_count, io_cb_t cb, void *arg)
 {
