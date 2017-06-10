@@ -189,8 +189,7 @@ void delete_key(char *key){
 	indx[ind] = NULL; //safety
 
 }
-
-
+void dummy_cb(void *unused){}
 
 //TODO: actually need to make this read asynchronously..
 void init_cb(void *arg){
@@ -215,7 +214,7 @@ void init_cb(void *arg){
 			if (ent->val_len > DATA_SZ){
 
 				char *buf = malloc(LBA_SIZE * blks);
-				dummy_dev_read(buf, blks_read, blks, NULL, NULL);
+				dummy_dev_read(buf, blks_read, blks, dummy_cb, NULL);
 				tocheck_crc = crc_data((buf + META_SZ), ent->val_len);
 		
 				free(buf);
@@ -261,7 +260,7 @@ void index_init(){
 	//printf("DEBUG: malloc'd buffer\n");
 	while(blks_read < MAX_LBA_NUM){
 		//printf("DEBUG: about to issue read..\n");
-		dummy_dev_read(buf, blks_read, 1, NULL, NULL);		
+		dummy_dev_read(buf, blks_read, 1, dummy_cb, NULL);		
 		init_cb(buf);
 	}
 
