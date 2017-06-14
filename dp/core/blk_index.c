@@ -257,45 +257,57 @@ void index_init(){
 	printf("DEBUG: attempting to read from device..\n"); 
 	char *buf = malloc(LBA_SIZE);
 	
-	//printf("DEBUG: malloc'd buffer\n");
 	while(blks_read < MAX_LBA_NUM){
 		//printf("DEBUG: about to issue read..\n");
 		dummy_dev_read(buf, blks_read, 1, dummy_cb, NULL);		
 		init_cb(buf);
 	}
 
-	/*
-	dummy_dev_read(buf, blks_read, 1, init_cb_cont, buf);
-	*/
-
+	//dummy_dev_read(buf, blks_read, 1, init_cb_oneblk, buf); 
 	free(buf);
 	
 }
 
+
+/* 
+ * Callback for handling getting rest of the data..
+ * arg is metadata + a known number of blocks
+ * 
+ */
+void init_cb_multiblk(void *arg){
+
+	//allocate a new index entry
+	struct index_ent *ent = malloc(sizeof(struct index_ent));
+
+	free(arg);
+}
+
 ///alternate version for asynchronous-ness
-void init_cb_cont(void *arg){
+void init_cb_oneblk(void *arg){
 
 	struct index_ent *ent = malloc(sizeof(struct index_ent));
-	memcpy(ent, arg, META_SZ);
 
-
-	if (ent->magic == METAMAGIC){
-
+	uint16_t *tmp = (uint16_t *)arg;
+	//assert(ent->magic == METAMAGIC);
+	if (*tmp  == METAMAGIC){
+		memcpy(ent, arg, META_SZ);
+		printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
 		assert(ent->val_len > 0);
-
+	
 		uint64_t blks = calc_numblks(ent->val_len);
 		struct index_ent *tmp = get_index_ent(ent->key);
 		
-		if (tmp && tmp->version < ent->version){
+		if ((tmp && tmp->version < ent->version)|| tmp == NULL){
 			uint16_t tocheck_crc;
 
 			if (ent->val_len > DATA_SZ){
 
 				char *buf = malloc(LBA_SIZE * blks);
-				dummy_dev_read(buf, blks_read, blks, NULL, NULL);
+				dummy_dev_read(buf, blks_read, blks, dummy_cb, NULL);
 				tocheck_crc = crc_data((buf + META_SZ), ent->val_len);
 		
-				free(buf);
+				//free(buf);
+				free(ent);
 
 			} else {
 				tocheck_crc = crc_data((arg + META_SZ), ent->val_len);
@@ -306,20 +318,22 @@ void init_cb_cont(void *arg){
 			alloc_block(ent->lba, blks);
 			print_index();
 			print_freelist();
-			printf("DEBUG: Blocks so far is %lu\n", blks_read);
-			return; //early exit
-
+		} else {
+			free(ent);
 		}
 		blks_read += blks; //even if we didn't keep the value, count it as read 
-
-	} else { //skip and keep reading..
+		printf("DEBUG: Read %lu, blocks so far is %d\n", blks, blks_read);
+	
+	} else { //garbage data, skip to next block
 		free(ent);
 		blks_read++;
+		printf("DEBUG:Skipped, blocks so far is %d\n", blks_read);
 	}
 
 	if (blks_read < MAX_LBA_NUM)
-		dummy_dev_read(arg, blks_read, 1, init_cb_cont, arg);
-
+		dummy_dev_read(buf, blks_read, 1, init_cb_oneblk, buf);
+	else
+		free(buf);
 }
 
 /* FOR DEBUGGING ONLY

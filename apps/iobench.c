@@ -13,6 +13,20 @@
 
 #include <ixev.h>
 
+//GLOBALS
+struct ixev_io_ops io_ops;
+char *iobuf;
+char *keys[MAX_KEYS];
+int curr_run;
+
+//input params
+char *iotype = "";
+int batchsize = 1; //default val?
+int num_runs = 0; 
+int io_size = 0; //writes only
+char *fname = ""; //reads only..
+
+
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
 {
@@ -29,36 +43,102 @@ struct ixev_conn_ops conn_ops = {
 	.dialed = &io_dummydialed,
 };
 
+
+
+static void start_timer(){}
+static void end_timer(){}
+
+/* Generates dummy data according to size 
+ * most of this is stolen from fio..
+ * 
+ */
+static void generate_data(size_t datasize, char *buf){
+
+	srand(time(0));
+	uint64_t datum; 
+	while (datasize){
+		datum = rand();
+		datasize -= sizeof(datum);
+		buf += sizeof(datum);
+	}
+}
+
+
+static void get_keys(){
+	fopen(fname);
+
+	for (int i = 0; i < num_runs*batchsize; i++){
+		fgets()
+	}
+
+
+
+
+}
+
 static void ro_get_handler(char *key, void *data, size_t datalen){
 
+	ixev_get_done(data);
+
+	ixev_get();
 }
 
 static void wo_put_handler(char *key, void *val){
 
+	//get next data, key
+
+
+	ixev_put();
+
 }
 
 static void rw_get_handler(char *key, void *data, size_t datalen){
-	//call put
+
+	ixev_get_done(data);
 
 }
 
 static rw_put_handler(char *key, void *val){
-	//call get
 
 }
 
 //dummy for now..
 static void delete_handler(char *key){ }
 
-struct ixev_io_ops io_ops;
+void batch_put(){
 
-void process_workload(char *type, int size){
+	for (int i=0; i < batchsize; i++){
+		ixev_put(key[i*curr_run], (void *)(iobuf + (i*curr_run*io_size)), io_size);
+	}
 
-	if (strcmp(type, "ro") || strcmp(type, "rw")){ //start w/ get
-		ixev_get();
 
-	} else if (strcmp(type, "wo")){
-		ixev_put();
+
+}
+
+void batch_get(){
+	for (int i=0; i < batchsize; i++){
+		ixev_get(key[i+curr_run]);
+	}
+}
+
+
+void start_workload(){
+
+	curr_run = 0;
+
+
+
+	if (strcmp(iotype, "ro") || strcmp(iotype, "rw")){ //start w/ get for mixed workload
+		
+		get_keys();
+		batch_get();
+
+	} else if (strcmp(iotype, "wo") || strcmp(iotype, "rw")){
+		assert(iosize > 0);
+		iobuf = malloc(batchsize * iosize);
+		
+		generate_data(batchsize * iosize);
+		batch_put();
 	}
 
 	while(1)
@@ -69,17 +149,42 @@ void process_workload(char *type, int size){
 
 int main(int argc, char *argv[]){
 
-	if (argc < 3){
-		printf("USAGE: <IO type> <IO size>\n"); //batch size? also how to bound length of execution? time bound or IOPS
-		return -1;
+	if (argc < 2){
+		fprintf(stderror, )
 	}
 
-	if (strcmp(argv[1], "ro") || strncmp(argv[1], "wo", 2)){ //can set arbitrary handlers for other op b/c will never get called..
+	while ((opt = getopt(argc, argv, "tbn:sf::")) != -1){
+		switch(opt)
+		{
+			case 't':
+				iotype = optarg;
+				break;
+			case 'b':
+				batchsize = optarg;
+				break;
+			case 'n':
+				numruns = optarg;
+				break;
+			case 's':
+				io_size = optarg;
+				break;
+			case 'f':
+				fname = optarg;
+				break;
+
+			default:
+				printf("USAGE: [-t IO type] [-b batch size] [-n num_runs] [-s IO size] [-f filename]\n"); //batch size? also how to bound length of execution? time bound or IOPS
+				return -1;
+		}
+
+	}
+
+	if (strcmp(iotype, "ro") || strncmp(iotype, "wo", 2)){ //can set arbitrary handlers for other op b/c will never get called..
 		io_ops.get_handler = &ro_get_handler;
 		io_ops.put_handler = &wo_put_handler; 
 		io_ops.delete_handler = &delete_handler;
 
-	} else if (strcmp(argv[1], "rw")){ //readwrite
+	} else if (strcmp(iotype, "rw")){ //readwrite
 		io_ops.get_handler = &rw_get_handler;
 		io_ops.put_handler = &rw_put_handler;
 		io_ops.delete_handler = &delete_handler;
@@ -104,7 +209,7 @@ int main(int argc, char *argv[]){
 		exit(ret);
 	}
 
-	process_workload(argv[1], atoi(argv[2]));
+	start_workload();
 
 	free(ctx);
 

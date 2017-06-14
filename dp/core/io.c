@@ -135,6 +135,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	int numzeros = (len <= DATA_SZ) ? (DATA_SZ - len) : LBA_SIZE - ((len - DATA_SZ) % LBA_SIZE);
 
+	//note that there might not be any zeros but for continuity/simplicity include this entry in the scatter gather list anyway..
 	iobuf->buf[currind*SG_MULT + 2].base = zerobuf;
 	iobuf->buf[currind*SG_MULT + 2].len = numzeros;
 		
