@@ -24,7 +24,7 @@ char *iotype = "";
 int batchsize = 1; //default val?
 int num_runs = 0; 
 int io_size = 0; //writes only
-char *fname = ""; //reads only..
+char *fname = "";
 
 
 // dummy functions for ixev_conn_ops 
@@ -45,19 +45,20 @@ struct ixev_conn_ops conn_ops = {
 
 
 
-static void start_timer(){}
-static void end_timer(){}
+//static void start_timer(){}
+//static void end_timer(){}
 
 /* Generates dummy data according to size 
- * most of this is stolen from fio..
+ * super dumb version for now...improve later.
  * 
  */
 static void generate_data(size_t datasize, char *buf){
 
 	srand(time(0));
-	uint64_t datum; 
+	int datum; 
 	while (datasize){
 		datum = rand();
+		buf = datum;
 		datasize -= sizeof(datum);
 		buf += sizeof(datum);
 	}
@@ -70,9 +71,6 @@ static void get_keys(){
 	for (int i = 0; i < num_runs*batchsize; i++){
 		fgets()
 	}
-
-
-
 
 }
 
@@ -88,7 +86,13 @@ static void wo_put_handler(char *key, void *val){
 	//get next data, key
 
 
-	ixev_put();
+	if (curr_run < num_runs){
+		batch_put();
+		curr_run++;
+	} else {
+		free(iobuf);
+		exit(0);
+	}
 
 }
 
@@ -106,38 +110,33 @@ static rw_put_handler(char *key, void *val){
 static void delete_handler(char *key){ }
 
 void batch_put(){
+	generate_data(batchsize * iosize, iobuf);
 
 	for (int i=0; i < batchsize; i++){
-		ixev_put(key[i*curr_run], (void *)(iobuf + (i*curr_run*io_size)), io_size);
+		ixev_put(key[i*curr_run], (void *)(iobuf + (i*io_size)), io_size);
 	}
-
-
-
 }
 
 void batch_get(){
-	for (int i=0; i < batchsize; i++){
-		ixev_get(key[i+curr_run]);
+	for (int i=1; i <= batchsize; i++){
+		ixev_get(key[(i*curr_run - 1)]);
 	}
 }
 
-
 void start_workload(){
 
-	curr_run = 0;
+	curr_run = 1;
 
+	//to simplify things, every workload reads keys from a file
+	get_keys();
 
-
-	if (strcmp(iotype, "ro") || strcmp(iotype, "rw")){ //start w/ get for mixed workload
-		
-		get_keys();
+	if (strcmp(iotype, "ro")){
 		batch_get();
 
 	} else if (strcmp(iotype, "wo") || strcmp(iotype, "rw")){
 		assert(iosize > 0);
-		iobuf = malloc(batchsize * iosize);
+		iobuf = malloc(batchsize * iosize); //only allocate enough for one batch's data
 		
-		generate_data(batchsize * iosize);
 		batch_put();
 	}
 
