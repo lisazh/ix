@@ -51,7 +51,7 @@ static char zerobuf[LBA_SIZE] = {0};
 int blkio_init(void)
 {
 	
-	printf("DEBUG: initializing block stuff..\n");
+	//printf("DEBUG: initializing block stuff..\n");
 	int ret;
 	ret = mempool_create_datastore(&pending_req_datastore, 32*MAX_PENDING_REQ,
 				       sizeof(struct pending_req), 0, MEMPOOL_DEFAULT_CHUNKSIZE, "pending_req");
@@ -60,7 +60,7 @@ int blkio_init(void)
 
 int blkio_init_cpu(void)
 {
-	printf("DEBUG: initializing per cpu block stuff..\n");
+	//printf("DEBUG: initializing per cpu block stuff..\n");
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	freelist_init(); //LTODO: this involves malloc
 	index_init();
@@ -109,7 +109,7 @@ ssize_t bsys_io_read(char *key){
 
 ssize_t bsys_io_write(char *key, void *val, size_t len){
 
-	printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
+	//printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
 
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	struct index_ent *newdata = new_index_ent(key, val, len);
@@ -174,7 +174,7 @@ ssize_t bsys_io_write_flush()
 		printf("DEBUG: no batched writes to issue\n");
 		return 0;
 	}
-	debugprint_sg();
+	//debugprint_sg();
 	int startlba = get_blk(iobuf->numblks);
 	//uint64_t ret = iobuf->numblks;
 

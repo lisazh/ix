@@ -8,7 +8,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/time.h>
+//#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <ixev.h>
@@ -16,20 +17,21 @@
 #define MAX_KEYS 1000000
 #define MAX_KEY_LEN 10 //overwrite our own value for benchmarking..
  						// can test longer keys but whatever..
-
+#define DEF_IO_SIZE 128
 //GLOBALS
 struct ixev_io_ops io_ops;
 char *iobuf;
 char *keys[MAX_KEYS];
-int curr_run;
+//int curr_run;
+int curr_iter; //within each batch...
 
-//input params
-char *iotype = "";
+//input params -- default values for all
+char iotype[3] = "ro\0";
 int batchsize = 1; //default val?
-int num_runs = 0; 
-int io_size = 0; //writes only
-char *fname = "";
-
+//int num_runs = 0; 
+int io_size = DEF_IO_SIZE; //writes only, use default value
+char fname[100] = "keys.ix";
+int max_iter = 4;
 
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
@@ -61,63 +63,85 @@ void generate_data(size_t datasize, char *buf){
 	int datum; 
 	while (datasize){
 		datum = rand();
-		buf = datum;
+		*((int *)buf) = datum;
 		datasize -= sizeof(datum);
 		buf += sizeof(datum);
 	}
 }
 
-
 void get_keys(){
-	FILE *fkeys; 
+	
+	if (fname == NULL){
+		fprintf(stderr, "No file specified\n");
+		exit(1);
 
+	}
+	FILE *fkeys; 
+	
 	fkeys = fopen(fname, "r");
 
 	for (int i = 0; i < MAX_KEYS; i++){
 		keys[i] = malloc(MAX_KEY_LEN);
 	}
 
-	for (int i = 0; i < num_runs*batchsize; i++){
-		if (fgets(str, MAX_KEY_LEN, fkeys) == NULL){
-			fprintf(stderr, "Unable to read key from %s\n, fname");
+	for (int i = 0; i < max_iter; i++){
+		if (fgets(keys[i], MAX_KEY_LEN, fkeys) == NULL){
+			fprintf(stderr, "Unable to read key from %s\n", fname);
 			fclose(fkeys);
 			exit(1);
 		}
 	}
-
 	fclose(fkeys);
 
 }
 
-void free_keys(){
+// allow specification of data file too...
+void get_data(char *fdataname){
+	FILE *fdata;
+	fdata = fopen(fdataname, "r");
+	
+	
+	for (int i = 0; i < max_iter*batchsize; i++){ //read everything..
+		if (fgets((iobuf + (i*io_size)), io_size, fdata) == NULL){
+			fprintf(stderr, "Unable to read data from %s\n", fname);
+			fclose(fdata);
+			exit(1);
+		}
 
+	}
+	fclose(fdata);
+
+}
+	
+
+void free_keys(){
 	for (int i = 0; i < MAX_KEYS; i++){
 		free(keys[i]);
 	}
 }
 
 void batch_put(){
-	generate_data(batchsize * iosize, iobuf);
+	generate_data(batchsize * io_size, iobuf);
 
 	for (int i=0; i < batchsize; i++){
-		ixev_put(key[i*curr_run], (void *)(iobuf + (i*io_size)), io_size);
+		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
 	}
 }
 
 void batch_get(){
 	for (int i=1; i <= batchsize; i++){
-		ixev_get(key[(i*curr_run - 1)]);
+		ixev_get(keys[i]);
 	}
 }
 
 
 static void ro_get_handler(char *key, void *data, size_t datalen){
-
+	//TODO: print result...or output to file..
 	ixev_get_done(data);
 
-	if (curr_run < num_runs){
-		batch_get();
-		curr_run++;
+	if (curr_iter < max_iter){
+		//batch_get();
+		ixev_get(keys[curr_iter++]);
 	} else {
 		free(iobuf);
 		free_keys();
@@ -128,13 +152,18 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 
 static void wo_put_handler(char *key, void *val){
 
-	if (curr_run < num_runs){
-		batch_put();
-		curr_run++;
+	if (curr_iter < max_iter){
+		//batch_put();
+		int i = curr_iter++;
+		ixev_put(keys[i], (void *)(iobuf + (i*io_size)) , io_size);
 	} else {
 		free(iobuf);
 		free_keys();
 		exit(0);
+	}
+	if ((curr_iter % batchsize) == 0){
+		generate_data(batchsize * io_size, iobuf);
+	
 	}
 
 }
@@ -145,7 +174,7 @@ static void rw_get_handler(char *key, void *data, size_t datalen){
 
 }
 
-static rw_put_handler(char *key, void *val){
+static void rw_put_handler(char *key, void *val){
 
 }
 
@@ -153,21 +182,22 @@ static rw_put_handler(char *key, void *val){
 static void delete_handler(char *key){ }
 
 void start_workload(){
-
-	curr_run = 1;
-
+	printf("DEBUG: starting workload\n");
 	//to simplify things, every workload reads keys from a file
 	get_keys();
-
-	if (strcmp(iotype, "ro")){
+	
+	if (strcmp(iotype, "ro") == 0){
+		printf("DEBUG: read-only mode\n");
 		batch_get();
 
-	} else if (strcmp(iotype, "wo") || strcmp(iotype, "rw")){
-		assert(iosize > 0);
-		iobuf = malloc(batchsize * iosize); //only allocate enough for one batch of data
-		
+	} else if (strcmp(iotype, "wo") == 0 || strcmp(iotype, "rw") == 0){
+		printf("DEBUG: iotype is %s\n", iotype);
+		iobuf = malloc(batchsize * io_size); //only allocate enough for one batch of data
 		batch_put();
+		generate_data(batchsize*io_size, iobuf); //next batch of data for writes..
 	}
+
+	curr_iter += batchsize;
 
 	while(1)
 		ixev_wait();
@@ -176,26 +206,33 @@ void start_workload(){
 
 
 int main(int argc, char *argv[]){
-
+	
+	/*
 	if (argc < 2){
 		fprintf(stderr, "USAGE: [-t IO type] [-b batch size] [-n # runs] [-s IO size] [-f filename]\n");
 		exit(1);
 	}
-
-	while ((opt = getopt(argc, argv, "tbn:sf::")) != -1){
+	int opt, numruns = 0;
+	*/
+	//strncpy(iotype, argv[1], 2);
+	//batchsize = atoi(argv[2]);
+	//strncpy(fname, argv[3], strlen(argv[3]));
+		
+	/*
+	while ((opt = getopt(argc, argv, "tbnf:s::")) != -1){
 		switch(opt)
 		{
 			case 't':
 				iotype = optarg;
 				break;
 			case 'b':
-				batchsize = optarg;
+				batchsize = atoi(optarg);
 				break;
 			case 'n':
-				num_runs = optarg;
+				numruns  = atoi(optarg);
 				break;
 			case 's':
-				io_size = optarg;
+				io_size = atoi(optarg);
 				break;
 			case 'f':
 				fname = optarg;
@@ -207,13 +244,18 @@ int main(int argc, char *argv[]){
 		}
 
 	}
+	*/
 
-	if (strcmp(iotype, "ro") || strncmp(iotype, "wo", 2)){ //can set arbitrary handlers for other op b/c will never get called..
+	//max_iter = numruns * batchsize;
+
+	printf("DEBUG: default values are: %s (iotype), %d (batchsize), %d (io_size), %d (max iterations), %s (key file)\n", iotype, batchsize, io_size, max_iter, fname);	
+
+	if (strcmp(iotype, "ro") == 0 || strncmp(iotype, "wo", 2) == 0){ //can set arbitrary handlers for other op b/c will never get called..
 		io_ops.get_handler = &ro_get_handler;
 		io_ops.put_handler = &wo_put_handler; 
 		io_ops.delete_handler = &delete_handler;
 
-	} else if (strcmp(iotype, "rw")){ //readwrite
+	} else if (strcmp(iotype, "rw") == 0){ //readwrite
 		io_ops.get_handler = &rw_get_handler;
 		io_ops.put_handler = &rw_put_handler;
 		io_ops.delete_handler = &delete_handler;

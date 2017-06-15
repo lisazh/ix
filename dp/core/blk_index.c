@@ -107,7 +107,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 	ret->val_len = len;
 	ret->crc = crc_data((uint8_t *)val, len);
 	ret->version = get_version(key) + 1;
-	printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
+	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	return ret;
 }
 
@@ -147,7 +147,7 @@ void update_index(struct index_ent *meta){
 		free(oldent);
 
 	} else { //key not already in index
-		printf("DEBUG: inserting key %s with hash %lu\n", key, hashval);
+		//printf("DEBUG: inserting key %s with hash %lu\n", key, hashval);
 		indx[hashval] = meta;
 	}
 }
@@ -268,12 +268,13 @@ void index_init(){
 	
 }
 
-
 /* 
  * Callback for handling getting rest of the data..
  * arg is metadata + a known number of blocks
  * 
  */
+/*
+
 void init_cb_multiblk(void *arg){
 
 	//allocate a new index entry
@@ -335,6 +336,7 @@ void init_cb_oneblk(void *arg){
 	else
 		free(buf);
 }
+*/
 
 /* FOR DEBUGGING ONLY
  * 
