@@ -13,6 +13,10 @@
 
 #include <ixev.h>
 
+#define MAX_KEYS 1000000
+#define MAX_KEY_LEN 10 //overwrite our own value for benchmarking..
+ 						// can test longer keys but whatever..
+
 //GLOBALS
 struct ixev_io_ops io_ops;
 char *iobuf;
@@ -50,9 +54,8 @@ struct ixev_conn_ops conn_ops = {
 
 /* Generates dummy data according to size 
  * super dumb version for now...improve later.
- * 
  */
-static void generate_data(size_t datasize, char *buf){
+void generate_data(size_t datasize, char *buf){
 
 	srand(time(0));
 	int datum; 
@@ -65,32 +68,72 @@ static void generate_data(size_t datasize, char *buf){
 }
 
 
-static void get_keys(){
-	fopen(fname);
+void get_keys(){
+	FILE *fkeys; 
 
-	for (int i = 0; i < num_runs*batchsize; i++){
-		fgets()
+	fkeys = fopen(fname, "r");
+
+	for (int i = 0; i < MAX_KEYS; i++){
+		keys[i] = malloc(MAX_KEY_LEN);
 	}
 
+	for (int i = 0; i < num_runs*batchsize; i++){
+		if (fgets(str, MAX_KEY_LEN, fkeys) == NULL){
+			fprintf(stderr, "Unable to read key from %s\n, fname");
+			fclose(fkeys);
+			exit(1);
+		}
+	}
+
+	fclose(fkeys);
+
 }
+
+void free_keys(){
+
+	for (int i = 0; i < MAX_KEYS; i++){
+		free(keys[i]);
+	}
+}
+
+void batch_put(){
+	generate_data(batchsize * iosize, iobuf);
+
+	for (int i=0; i < batchsize; i++){
+		ixev_put(key[i*curr_run], (void *)(iobuf + (i*io_size)), io_size);
+	}
+}
+
+void batch_get(){
+	for (int i=1; i <= batchsize; i++){
+		ixev_get(key[(i*curr_run - 1)]);
+	}
+}
+
 
 static void ro_get_handler(char *key, void *data, size_t datalen){
 
 	ixev_get_done(data);
 
-	ixev_get();
+	if (curr_run < num_runs){
+		batch_get();
+		curr_run++;
+	} else {
+		free(iobuf);
+		free_keys();
+		exit(0);
+	}
+
 }
 
 static void wo_put_handler(char *key, void *val){
-
-	//get next data, key
-
 
 	if (curr_run < num_runs){
 		batch_put();
 		curr_run++;
 	} else {
 		free(iobuf);
+		free_keys();
 		exit(0);
 	}
 
@@ -109,20 +152,6 @@ static rw_put_handler(char *key, void *val){
 //dummy for now..
 static void delete_handler(char *key){ }
 
-void batch_put(){
-	generate_data(batchsize * iosize, iobuf);
-
-	for (int i=0; i < batchsize; i++){
-		ixev_put(key[i*curr_run], (void *)(iobuf + (i*io_size)), io_size);
-	}
-}
-
-void batch_get(){
-	for (int i=1; i <= batchsize; i++){
-		ixev_get(key[(i*curr_run - 1)]);
-	}
-}
-
 void start_workload(){
 
 	curr_run = 1;
@@ -135,7 +164,7 @@ void start_workload(){
 
 	} else if (strcmp(iotype, "wo") || strcmp(iotype, "rw")){
 		assert(iosize > 0);
-		iobuf = malloc(batchsize * iosize); //only allocate enough for one batch's data
+		iobuf = malloc(batchsize * iosize); //only allocate enough for one batch of data
 		
 		batch_put();
 	}
@@ -149,7 +178,8 @@ void start_workload(){
 int main(int argc, char *argv[]){
 
 	if (argc < 2){
-		fprintf(stderror, )
+		fprintf(stderr, "USAGE: [-t IO type] [-b batch size] [-n # runs] [-s IO size] [-f filename]\n");
+		exit(1);
 	}
 
 	while ((opt = getopt(argc, argv, "tbn:sf::")) != -1){
@@ -162,7 +192,7 @@ int main(int argc, char *argv[]){
 				batchsize = optarg;
 				break;
 			case 'n':
-				numruns = optarg;
+				num_runs = optarg;
 				break;
 			case 's':
 				io_size = optarg;
@@ -173,7 +203,7 @@ int main(int argc, char *argv[]){
 
 			default:
 				printf("USAGE: [-t IO type] [-b batch size] [-n num_runs] [-s IO size] [-f filename]\n"); //batch size? also how to bound length of execution? time bound or IOPS
-				return -1;
+				exit(1);
 		}
 
 	}
