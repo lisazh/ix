@@ -236,6 +236,8 @@ void io_write_cb(void *unused){
 		iobuf->buf[i*SG_MULT].len = 0;
 		iobuf->buf[i*SG_MULT + 1].base = NULL;		
 		iobuf->buf[i*SG_MULT + 1].len = 0;
+		iobuf->buf[i*SG_MULT + 2].base = NULL;
+		iobuf->buf[i*SG_MULT + 2].len = 0;
 	}
 	
 	//reset variables
