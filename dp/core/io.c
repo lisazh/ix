@@ -175,7 +175,7 @@ ssize_t bsys_io_write_flush()
 		return 0;
 	}
 	//debugprint_sg();
-	int startlba = get_blk(iobuf->numblks);
+	int startlba = get_blk(iobuf->numblks); //allocate entire batch in the index
 	//uint64_t ret = iobuf->numblks;
 
 	//update lba values..
@@ -184,7 +184,9 @@ ssize_t bsys_io_write_flush()
 			if (i == 0){
 				(iobuf->currbatch[i])->lba = startlba;
 			} else {
-				(iobuf->currbatch[i])->lba = startlba + calc_numblks((iobuf->currbatch[i-1])->val_len);
+				int blks = calc_numblks((iobuf->currbatch[i-1])->val_len);
+				(iobuf->currbatch[i])->lba = startlba + blks;
+				startlba += blks;
 			}
 		}
 	}
@@ -228,8 +230,9 @@ void io_write_cb(void *unused){
 		void *uaddr = iobuf->buf[i*SG_MULT + 1].base;
 		usys_io_wrote(iobuf->usrkeys[i], uaddr);
 
-		printf("DEBUG: updated index entry for %s\n", iobuf->currbatch[i]->key);
+		printf("DEBUG: updated index entry for %s at %p\n", iobuf->usrkeys[i], uaddr);
 		iobuf->currbatch[i] = NULL; //update the pointer
+		iobuf->usrkeys[i] = NULL;
 
 		//update sg_entries
 		iobuf->buf[i*SG_MULT].base = NULL;
