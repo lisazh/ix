@@ -14,8 +14,8 @@
 
 #include <ixev.h>
 
-#define MAX_KEYS 1000000
-#define MAX_KEY_LEN 10 //overwrite the internal value for benchmarking..
+//#define MAX_KEYS 10
+#define MAX_KEY_LEN 4 //overwrite the internal value for benchmarking..
  						// can test longer keys but whatever..
 #define DEF_IO_SIZE 128
 
@@ -29,7 +29,7 @@ enum {
 //GLOBALS
 struct ixev_io_ops io_ops;
 char *iobuf;
-char *keys[MAX_KEYS];
+char **keys;
 //int curr_run;
 
 int curr_iter = 0;
@@ -64,7 +64,7 @@ struct ixev_conn_ops conn_ops = {
 
 
 static void start_timer(char *key){
-	int ind = atoi(key);
+	int ind = atoi(key) - 1;
 	struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
 	if (gettimeofday(timer, NULL)){
 		fprintf(stderr, "Timer issue. \n");
@@ -75,7 +75,7 @@ static void start_timer(char *key){
 static void end_timer(char * key){
 	printf("DEBUG: trying catch end time\n");
 	//struct timeval *newtime = malloc(sizeof(struct timeval));
-	int ind = atoi(key);
+	int ind = atoi(key) - 1;
 	struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
 	time_t old_secs = timer->tv_sec;
 	suseconds_t old_usecs = timer->tv_usec;
@@ -117,15 +117,20 @@ static void flush_timers(){
  */
 void generate_data(size_t datasize, char *buf){
 	//printf("DEBUG: iobuf starting at %p\n", buf);
-	srand(time(0));
-	int datum; 
-	while (datasize){
-		datum = rand();
+	//srand(time(0));
+	//int datum; 
+	//while (datasize){
+		//datum = rand();
 //		printf("DEBUG: size of rand thing %lu\n", sizeof(datum));
-		*((int *)buf) = datum;
-		datasize -= sizeof(datum);
-		buf += sizeof(datum);
+		//*((int *)buf) = datum;
+		//datasize -= sizeof(datum);
+		//buf += sizeof(datum);
+	//}
+	for (int i = 0; i < datasize; i++){
+		buf[i] = 'a';		
 	}
+	buf[datasize] = '\0';
+	//printf("DEBUG: data generated is %s\n", buf);
 }
 
 void get_keys(){
@@ -141,17 +146,21 @@ void get_keys(){
 		fprintf(stderr, "Unable to open file %s\n", fname);
 		exit(1);
 	}
-
+	/*
 	for (int i = 0; i < MAX_KEYS; i++){
 		keys[i] = malloc(MAX_KEY_LEN);
+		printf("DEBUG: allocated memory for key %d at %p\n", i + 1, keys[i]);
 	}
-
+	*/
+	keys = malloc(sizeof(char * ) * max_iter);
 	for (int i = 0; i < max_iter; i++){
-		if (fgets(keys[i], MAX_KEY_LEN, fkeys) == NULL){
+		char *key = malloc(MAX_KEY_LEN);
+		if (fgets(key, MAX_KEY_LEN, fkeys) == NULL){
 			fprintf(stderr, "Unable to read key from %s\n", fname);
 			fclose(fkeys);
 			exit(1);
 		}
+		keys[i] = key;
 	}
 	fclose(fkeys);
 
@@ -174,9 +183,10 @@ void get_data(char *fdataname){
 	
 
 void free_keys(){
-	for (int i = 0; i < MAX_KEYS; i++){
+	for (int i = 0; i < max_iter; i++){
 		free(keys[i]);
 	}
+	free(keys);
 }
 
 void batch_put(){
@@ -198,9 +208,9 @@ void batch_get(){
 
 void cleanup(){
 	printf("DEBUGG: debugging cleanup\n");
-	flush_timers();
+	//flush_timers();
 	printf("DEBUG: flushed timers\n");
-	//free(timers);
+	free(timers);
 	printf("DEBUG: freed timers\n");
 	free_keys();
 	printf("DEBUG: freed keys\n");
@@ -235,6 +245,7 @@ static void wo_put_handler(char *key, void *val){
 	//printf("DEBUG: incremented responses, %d\n", resp_iter);
 	end_timer(key);
 	//printf("DEBUG: timer ended for key %s\n");
+	printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	if (curr_iter <= max_iter){
 		//batch_put();
 		int i = curr_iter++; 
