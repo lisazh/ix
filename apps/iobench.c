@@ -38,9 +38,8 @@ int resp_iter = 0; //
 uint8_t iotype;
 int batchsize = 1; //default
 int io_size = DEF_IO_SIZE; //writes only
-char fname[100] = "keys.ix";
+char *fname = "keys.ix";
 int max_iter = 4;
-
 
 struct timeval **timers;
 // dummy functions for ixev_conn_ops 
@@ -62,7 +61,8 @@ struct ixev_conn_ops conn_ops = {
 
 
 static void start_timer(char *key){
-	int ind = atoi(key) - 1;
+	//int ind = atoi(key) - 1;
+	int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
 	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
 	struct timeval *timer = timers[ind];
 	if (gettimeofday(timer, NULL)){
@@ -74,7 +74,8 @@ static void start_timer(char *key){
 static void end_timer(char * key){
 	//printf("DEBUG: trying catch end time\n");
 	//struct timeval *newtime = malloc(sizeof(struct timeval));
-	int ind = atoi(key) - 1;
+	//int ind = atoi(key) - 1;
+	int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
 	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
 	struct timeval *timer = timers[ind];
 	time_t old_secs = timer->tv_sec;
@@ -293,9 +294,10 @@ static void wo_put_handler(char *key, void *val){
 	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++; 
-		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
+		//ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
+		ixev_put(key, (void *)(iobuf + ((i % batchsize)*io_size)), io_size);
 		//printf("DEBUG: put issued for next key %s\n", keys[i]);
-		start_timer(keys[i]);
+		start_timer(key);
 		///printf("DEBUG: timer started for next key %s\n", keys[i]);
 	} else if (resp_iter >= max_iter){
 		//printf("DEBUG: end reached on callback for key %s\n", key);
