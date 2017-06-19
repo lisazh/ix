@@ -212,9 +212,10 @@ void batch_put(){
  * in order to get a large number of concurrent in-flight requests
  */
 void batch_get(){
-	for (int i=1; i <= batchsize; i++){
+	for (int i = 0; i < batchsize; i++){
 		ixev_get(keys[i]);
 		start_timer(keys[i]);
+		curr_iter++;
 	}
 }
 
@@ -246,14 +247,14 @@ void flushandfree_timers(){
 }
 
 void cleanup(){
-	printf("DEBUGG: debugging cleanup\n");
+	//printf("DEBUGG: debugging cleanup\n");
 	//flush_timers();
 	//printf("DEBUG: flushed timers\n");
 	//free(timers);
 	flushandfree_timers();
-	printf("DEBUG: flushed & freed timers\n");
+	///printf("DEBUG: flushed & freed timers\n");
 	free_keys();
-	printf("DEBUG: freed keys\n");
+	//printf("DEBUG: freed keys\n");
 
 	if (iotype == WRITE_ONLY || iotype == READ_WRITE)
 		free(iobuf);
@@ -284,30 +285,30 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 
 // callback for ixev_put in WRITE_ONLY workloads
 static void wo_put_handler(char *key, void *val){
-	printf("DEBUG: trying to isolate crash\n");
+	//printf("DEBUG: trying to isolate crash\n");
 	resp_iter++;
-	printf("DEBUG: incremented responses, %d\n", resp_iter);
+	//printf("DEBUG: incremented responses, %d\n", resp_iter);
 	end_timer(key);
 	//printf("DEBUG: timer ended for key %s\n");
-	printf("DEBUG: callback reached for key %s at %p\n", key, key);
+	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++; 
-		ixev_put(keys[i], (void *)(iobuf + (i*io_size)) , io_size);
-		printf("DEBUG: put issued for next key %s\n", keys[i]);
+		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
+		//printf("DEBUG: put issued for next key %s\n", keys[i]);
 		start_timer(keys[i]);
-		printf("DEBUG: timer started for next key %s\n", keys[i]);
+		///printf("DEBUG: timer started for next key %s\n", keys[i]);
 	} else if (resp_iter >= max_iter){
-		printf("DEBUG: end reached on callback for key %s\n", key);
+		//printf("DEBUG: end reached on callback for key %s\n", key);
 		cleanup();
 		exit(0);
 	}
 
 	if ((curr_iter % batchsize) == 0){
-		printf("DEBUG: is this where it crashes?\n");
+		//printf("DEBUG: is this where it crashes?\n");
 		generate_data(batchsize * io_size, iobuf);
 	}
 
-	printf("DEBUG: reached end of key %s callback no issue\n", key);
+	//printf("DEBUG: reached end of key %s callback no issue\n", key);
 
 }
 
@@ -367,11 +368,12 @@ void start_workload(){
 
 int main(int argc, char *argv[]){
 	
-	if (argc < 2){
-		fprintf(stderr, "USAGE: [-t IO type] [-b batch size] [-n # runs] [-s IO size] [-f filename]\n");
+	if (argc < 3){
+		fprintf(stderr, "USAGE: <IO type> <batch size> <-n # runs>\n");
 		exit(1);
 	}
-	int opt, numruns = 0;
+	int numruns = 0;
+	//int opt;
 	//strncpy(iotype, argv[1], 2);
 	//batchsize = atoi(argv[2]);
 	//strncpy(fname, argv[3], strlen(argv[3]));
@@ -406,6 +408,7 @@ int main(int argc, char *argv[]){
 	max_iter = numruns * batchsize;
 
 	printf("DEBUG: params are: %i (iotype), %d (batchsize), %d (io_size), %d (max iterations), %s (key file)\n", iotype, batchsize, io_size, max_iter, fname);
+	printf("DEBUG: current and response iterations are %d and %d\n", curr_iter, resp_iter);	
 
 	if (iotype == READ_ONLY || iotype == WRITE_ONLY){
 		io_ops.get_handler = &ro_get_handler;

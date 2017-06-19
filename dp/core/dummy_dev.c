@@ -18,8 +18,8 @@ static DEFINE_PERCPU(struct mempool, timer_mempool);
 static DEFINE_PERCPU(char *, dummy_dev);
 
 #define MAX_PENDING_TIMERS 1024
-#define WRITE_DELAY 500
-#define READ_DELAY 100
+#define WRITE_DELAY 50
+#define READ_DELAY 10
 
 struct io_timer {
 	struct timer t;

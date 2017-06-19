@@ -20,7 +20,7 @@
 //#define NVME_AWUNPF 2048 //LTODO: will need to get this from "device" config or whatever
 #define DEVBLK_SIZE 1000000 // reasonable approximation of an erase block..
 //#define MAX_BATCH (DEVBLK_SIZE/LBA_SIZE) //LTODO move LBA_SIZE def from somewhere else 
-#define MAX_BATCH 8 //FOR TESTING FIX LATER
+#define MAX_BATCH 1024 //FOR TESTING FIX LATER
 #define SG_MULT 3 //number of sg entries needed per write (LTODO change to 3 eventually)
 // LTODO: for each write need 3 entries: meta, data, zeros ()
 #define READ_BATCH 8 // number of buffers per read - 2KB per buffer
@@ -126,7 +126,9 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
-	iobuf->numblks += calc_numblks(len);
+	printf("DEBUG: numblks is %u..\n", iobuf->numblks);
+	iobuf->numblks = iobuf->numblks + calc_numblks(len);
+	printf("DEBUG: and now numblks is %u\n", iobuf->numblks);
 	iobuf->buf[currind*SG_MULT].base = newdata;
 	iobuf->buf[currind*SG_MULT].len = META_SZ;
 
