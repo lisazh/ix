@@ -64,15 +64,15 @@ struct ixev_conn_ops conn_ops = {
 static void start_timer(char *key){
 	int ind = atoi(key) - 1;
 	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
-	struct timeval *timer = timers[ind]
-	if (gettimeofday(timers[ind], NULL)){
+	struct timeval *timer = timers[ind];
+	if (gettimeofday(timer, NULL)){
 		fprintf(stderr, "Timer issue. \n");
 		exit(1);
 	}
 }
 
 static void end_timer(char * key){
-	printf("DEBUG: trying catch end time\n");
+	//printf("DEBUG: trying catch end time\n");
 	//struct timeval *newtime = malloc(sizeof(struct timeval));
 	int ind = atoi(key) - 1;
 	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
@@ -162,7 +162,9 @@ void get_keys(){
 			exit(1);
 		}
 		// null-terminate?
+		key[strcspn(key, "\n")] = '\0';
 		keys[i] = key;
+		//printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
 	}
 	fclose(fkeys);
 
@@ -282,17 +284,18 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 
 // callback for ixev_put in WRITE_ONLY workloads
 static void wo_put_handler(char *key, void *val){
-	//printf("DEBUG: trying to isolate crash\n");
+	printf("DEBUG: trying to isolate crash\n");
 	resp_iter++;
-	//printf("DEBUG: incremented responses, %d\n", resp_iter);
+	printf("DEBUG: incremented responses, %d\n", resp_iter);
 	end_timer(key);
 	//printf("DEBUG: timer ended for key %s\n");
 	printf("DEBUG: callback reached for key %s at %p\n", key, key);
-	if (curr_iter <= max_iter){
-
+	if (curr_iter < max_iter){
 		int i = curr_iter++; 
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)) , io_size);
+		printf("DEBUG: put issued for next key %s\n", keys[i]);
 		start_timer(keys[i]);
+		printf("DEBUG: timer started for next key %s\n", keys[i]);
 	} else if (resp_iter >= max_iter){
 		printf("DEBUG: end reached on callback for key %s\n", key);
 		cleanup();

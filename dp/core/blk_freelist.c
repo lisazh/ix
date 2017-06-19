@@ -17,8 +17,8 @@
 */
 
 struct freelist_ent { //keep this internal to this file..?
-	uint64_t start_lba;
-	uint64_t lba_count;
+	lba_t start_lba;
+	lbasz_t lba_count;
 	struct freelist_ent *next;	
 };
 
@@ -28,7 +28,7 @@ static struct freelist_ent *freelist;
 /* Mark specified LBA range as occupied in the freelist
  * Only used on start in index construction
  */ 
-void alloc_block(uint64_t lba, uint64_t lba_count){
+void alloc_block(lba_t lba, lbasz_t lba_count){
 	struct freelist_ent *ent = freelist;
 
 	while (ent->next){
@@ -48,7 +48,7 @@ void alloc_block(uint64_t lba, uint64_t lba_count){
 
 		struct freelist_ent *newent = malloc(sizeof(struct freelist_ent));
 		newent->start_lba = (lba + lba_count);
-		newent->lba_count = ent->lba_count - lba_count - (lba - ent-start_lba);
+		newent->lba_count = ent->lba_count - lba_count - (lba - ent->start_lba);
 		newent->next = ent->next;
 
 		ent->lba_count = lba - ent->start_lba;
@@ -58,7 +58,7 @@ void alloc_block(uint64_t lba, uint64_t lba_count){
 
 }
 
-void mark_used_blk(struct freelist_ent *ent, uint64_t num_blks){
+void mark_used_blk(struct freelist_ent *ent, lbasz_t num_blks){
 
 	if (num_blks < ent->lba_count){
 		ent->start_lba += num_blks;
@@ -84,8 +84,9 @@ void mark_used_blk(struct freelist_ent *ent, uint64_t num_blks){
 * first fit alg. b/c not likely to do *too* much reclamation (although this may change)
 * also last ent guaranteed to be "rest of space" entry
 */ 
-uint64_t get_blk(uint64_t num_blks){
-	
+lba_t get_blk(lbasz_t num_blks){
+	printf("DEBUG: trying to find space for %lu blocks\n", num_blks);
+	print_freelist();
 	struct freelist_ent *iter = freelist;
 	//printf("DEBUG: entering loop\n");
 	while (iter){
@@ -93,10 +94,11 @@ uint64_t get_blk(uint64_t num_blks){
 			break;
 		iter = iter->next;
 	} 
-	//printf("DEBUG: exited loop\n");
-
+	printf("DEBUG: exited loop\n");
+	
+	if (iter == NULL)
+		printf("DEBUG: reached end without finding space.. \n");
 	//TODO: currently assume will always have storage space..what if run out of blocks 
-
 	uint64_t ret = iter->start_lba;
 	mark_used_blk(iter, num_blks); //in case iter is modified
 
@@ -106,7 +108,7 @@ uint64_t get_blk(uint64_t num_blks){
 /*
  * coalesce free block info w/ entry ent
  */
-static void coalesce_blks(uint64_t lba, uint64_t count, struct freelist_ent *ent){
+static void coalesce_blks(lba_t lba, lbasz_t count, struct freelist_ent *ent){
 	//ent->start_lba = lba;
 	ent->lba_count += count;
 	if (lba < ent->start_lba)
@@ -129,7 +131,7 @@ static void coalesce_entries(struct freelist_ent *first, struct freelist_ent *se
  * Free lba range (assuming freelist organized in ASCENDING order)
  * NOTE: b/c we allocate from ahead, coalesce from opposite direction
  */ 
-void free_blk(uint64_t lba, uint64_t num_blks){
+void free_blk(lba_t lba, lbasz_t num_blks){
 
 	assert(lba < MAX_LBA_NUM);
 

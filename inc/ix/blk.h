@@ -21,10 +21,13 @@
 
 #define METAMAGIC 0xd006
 
+typedef int32_t lba_t; //typedef'd in case we change the size...used to be 64bit but truncated for now..
+typedef uint32_t lbasz_t;
+
 struct index_ent {
 	uint16_t magic; //magic value for ease checking..
 	char key[MAX_KEY_LEN];
-	int32_t lba;
+	lba_t lba;
 	uint64_t val_len; //length of value in BYTES
 	//uint64_t lba_count;
 	uint16_t crc;
@@ -32,17 +35,15 @@ struct index_ent {
 	struct index_ent *next; //for hash chaining..
 } __packed;
 
-
-
 static struct index_ent *indx[MAX_ENTRIES];
 
 /* free list management */
 
-void alloc_block(uint64_t lba, uint64_t lba_count);
+void alloc_block(lba_t lba, lbasz_t lba_count);
 
-uint64_t get_blk(uint64_t num_blks);
+lba_t get_blk(lbasz_t num_blks);
 
-void free_blk(uint64_t lba, uint64_t num_blks);
+void free_blk(lba_t lba, lbasz_t num_blks);
 
 void freelist_init();
 
@@ -51,11 +52,11 @@ void print_freelist(); //for debugging..
 /* index management */
 //uint16_t crc_data(uint8_t msg[], size_t len);
 
-uint64_t calc_numblks(ssize_t data_len);
+lbasz_t calc_numblks(uint64_t data_len);
 
 struct index_ent *get_index_ent(const char *key);
 
-struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t len);
+struct index_ent *new_index_ent(const char *key, const void *val, uint64_t len);
 
 //uint16_t get_version(const char *key);
 

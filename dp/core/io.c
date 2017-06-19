@@ -31,7 +31,7 @@ void io_write_cb(void *unused);
 
 struct ibuf{
 	struct sg_entry buf[MAX_BATCH*SG_MULT]; 
-	int32_t numblks;
+	uint32_t numblks;
 	struct index_ent *currbatch[MAX_BATCH];
 	char *usrkeys[MAX_BATCH];
 	int32_t currind;
@@ -140,7 +140,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	iobuf->buf[currind*SG_MULT + 2].len = numzeros;
 		
 	//printf("DEBUG: writing %d (meta) + %d (data) + %d (zeros) bytes\n", META_SZ, len, numzeros);
-
+	
+	printf("DEBUG: current value of numblks is %d after adding val with %lu bytes\n", iobuf->numblks, len);
 	iobuf->usrkeys[currind] = key;
 	iobuf->currind++;
 
@@ -177,7 +178,7 @@ ssize_t bsys_io_write_flush()
 	//debugprint_sg();
 	int startlba = get_blk(iobuf->numblks); //allocate entire batch in the index
 	//uint64_t ret = iobuf->numblks;
-
+	
 	//update lba values..
 	for (int i = 0; i < iobuf->currind; i++){
 		if ((iobuf->currbatch[i])->key != NULL){		

@@ -53,7 +53,7 @@ struct index_ent *get_index_ent(const char *key){
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *ret = indx[hashval];
 
-	printf("DEBUG: looking for key %s with hash %lu\n", key, hashval);
+	//printf("DEBUG: looking for key %s with hash %lu\n", key, hashval);
 
 	if (ret == NULL){ //no key found 
 		return ret;
@@ -85,11 +85,12 @@ uint16_t get_version(const char *key){
  * helper function for determining how many blocks the data should occupy
  * assumes data_len is never zero..	
  */
-uint64_t calc_numblks(ssize_t data_len){
+lbasz_t calc_numblks(uint64_t data_len){
 	//uint64_t ret = (data_len + DATA_SZ - 1) / DATA_SZ; //short way;
-	uint64_t ret = 1; //minimum one block 
+	lbasz_t ret = 1; //minimum one block 
 	if (data_len > DATA_SZ)
 		ret += ((data_len - DATA_SZ) + LBA_SIZE - 1) / LBA_SIZE;
+	printf("DEBUG: calc numblks returning %u for data of length %lu\n", ret, data_len);
 	return ret;
 }
 
