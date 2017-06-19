@@ -30,21 +30,19 @@ enum {
 struct ixev_io_ops io_ops;
 char *iobuf;
 char **keys;
-//int curr_run;
 
 int curr_iter = 0;
-int resp_iter = 0;
+int resp_iter = 0; //
+
 //input params -- default values for all
-//char iotype[3] = "ro\0";
 uint8_t iotype;
 int batchsize = 1; //default
-//int num_runs = 0; 
 int io_size = DEF_IO_SIZE; //writes only
 char fname[100] = "keys.ix";
 int max_iter = 4;
 
 
-struct timeval *timers;
+struct timeval **timers;
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
 {
@@ -65,8 +63,9 @@ struct ixev_conn_ops conn_ops = {
 
 static void start_timer(char *key){
 	int ind = atoi(key) - 1;
-	struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
-	if (gettimeofday(timer, NULL)){
+	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
+	struct timeval *timer = timers[ind]
+	if (gettimeofday(timers[ind], NULL)){
 		fprintf(stderr, "Timer issue. \n");
 		exit(1);
 	}
@@ -76,7 +75,8 @@ static void end_timer(char * key){
 	printf("DEBUG: trying catch end time\n");
 	//struct timeval *newtime = malloc(sizeof(struct timeval));
 	int ind = atoi(key) - 1;
-	struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
+	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
+	struct timeval *timer = timers[ind];
 	time_t old_secs = timer->tv_sec;
 	suseconds_t old_usecs = timer->tv_usec;
 
@@ -152,7 +152,8 @@ void get_keys(){
 		printf("DEBUG: allocated memory for key %d at %p\n", i + 1, keys[i]);
 	}
 	*/
-	keys = malloc(sizeof(char * ) * max_iter);
+	keys = malloc(sizeof(char *) * max_iter);
+
 	for (int i = 0; i < max_iter; i++){
 		char *key = malloc(MAX_KEY_LEN);
 		if (fgets(key, MAX_KEY_LEN, fkeys) == NULL){
@@ -160,6 +161,7 @@ void get_keys(){
 			fclose(fkeys);
 			exit(1);
 		}
+		// null-terminate?
 		keys[i] = key;
 	}
 	fclose(fkeys);
@@ -189,6 +191,10 @@ void free_keys(){
 	free(keys);
 }
 
+
+/* Called only once at the beginning of the workload..
+ * in order to get a large number of concurrent in-flight requests
+ */
 void batch_put(){
 	generate_data(batchsize * io_size, iobuf);
 
@@ -199,6 +205,10 @@ void batch_put(){
 	}
 }
 
+
+/* Called only once at the beginning of the workload..
+ * in order to get a large number of concurrent in-flight requests
+ */
 void batch_get(){
 	for (int i=1; i <= batchsize; i++){
 		ixev_get(keys[i]);
@@ -206,12 +216,40 @@ void batch_get(){
 	}
 }
 
+void init_timers(){
+
+	timers = malloc(sizeof(struct timeval *) * max_iter);
+	for (int i = 0; i < max_iter; i++){
+		timers[i] = malloc(sizeof (struct timeval));
+	}
+}
+
+void flushandfree_timers(){
+	FILE *res;
+
+	//TODO uniquely identify results file on every run..
+	if ((res = fopen("results.ix", "w")) == NULL){
+		fprintf(stderr, "Unable to open file %s\n", fname);
+		exit(1);
+	}
+
+	for (int i = 0; i < max_iter; i++){ //TODO double check format..
+		fprintf(res, "%d,%ld:%ld\n", i+1, timers[i]->tv_sec, timers[i]->tv_usec);
+		free(timers[i]);
+	}	 
+
+	fclose(res);
+	free(timers);
+
+}
+
 void cleanup(){
 	printf("DEBUGG: debugging cleanup\n");
 	//flush_timers();
-	printf("DEBUG: flushed timers\n");
-	free(timers);
-	printf("DEBUG: freed timers\n");
+	//printf("DEBUG: flushed timers\n");
+	//free(timers);
+	flushandfree_timers();
+	printf("DEBUG: flushed & freed timers\n");
 	free_keys();
 	printf("DEBUG: freed keys\n");
 
@@ -221,6 +259,8 @@ void cleanup(){
 	printf("DEBUG: clean up complete\n");
 }
 
+
+// callback for ixev_put in READ_ONLY workloads
 static void ro_get_handler(char *key, void *data, size_t datalen){
 	//TODO: print result...or output to file..
 	resp_iter++;
@@ -239,6 +279,8 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 
 }
 
+
+// callback for ixev_put in WRITE_ONLY workloads
 static void wo_put_handler(char *key, void *val){
 	//printf("DEBUG: trying to isolate crash\n");
 	resp_iter++;
@@ -247,7 +289,7 @@ static void wo_put_handler(char *key, void *val){
 	//printf("DEBUG: timer ended for key %s\n");
 	printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	if (curr_iter <= max_iter){
-		//batch_put();
+
 		int i = curr_iter++; 
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)) , io_size);
 		start_timer(keys[i]);
@@ -256,11 +298,12 @@ static void wo_put_handler(char *key, void *val){
 		cleanup();
 		exit(0);
 	}
+
 	if ((curr_iter % batchsize) == 0){
 		printf("DEBUG: is this where it crashes?\n");
 		generate_data(batchsize * io_size, iobuf);
-	
 	}
+
 	printf("DEBUG: reached end of key %s callback no issue\n", key);
 
 }
@@ -274,8 +317,7 @@ static void rw_get_handler(char *key, void *data, size_t datalen){
 
 
 	} else {
-		free(iobuf);
-		free_keys();
+		cleanup();
 		exit(0);
 	}
 
@@ -289,8 +331,7 @@ static void rw_put_handler(char *key, void *val){
 
 
 	} else {
-		free(iobuf);
-		free_keys();
+		cleanup();
 		exit(0);
 	}
 
@@ -301,23 +342,12 @@ static void delete_handler(char *key){ }
 
 void start_workload(){
 	printf("DEBUG: starting workload\n");
-	//to simplify things, every workload reads keys from a file
+
 	get_keys();
 
-	timers = malloc(sizeof(struct timeval) * (max_iter));
-	
-	/*
-	if (strcmp(iotype, "ro") == 0){
-		printf("DEBUG: read-only mode\n");
-		batch_get();
+	init_timers();
+	//timers = malloc(sizeof(struct timeval *) * (max_iter));
 
-	} else if (strcmp(iotype, "wo") == 0 || strcmp(iotype, "rw") == 0){
-		printf("DEBUG: iotype is %s\n", iotype);
-		iobuf = malloc(batchsize * io_size); //only allocate enough for one batch of data
-		batch_put();
-		generate_data(batchsize*io_size, iobuf); //next batch of data for writes..
-	}
-	*/
 	if (iotype == READ_ONLY){
 		batch_get();
 	} else if (iotype == WRITE_ONLY || iotype == READ_WRITE){
@@ -325,8 +355,6 @@ void start_workload(){
 		batch_put();
 		generate_data(batchsize*io_size, iobuf);
 	}
-
-	//curr_iter += batchsize;
 
 	while(1)
 		ixev_wait();
@@ -374,24 +402,7 @@ int main(int argc, char *argv[]){
 
 	max_iter = numruns * batchsize;
 
-	printf("DEBUG: params are: %i (iotype), %d (batchsize), %d (io_size), %d (max iterations), %s (key file)\n", iotype, batchsize, io_size, max_iter, fname);	
-
-	/*
-	if (strcmp(iotype, "ro") == 0 || strncmp(iotype, "wo", 2) == 0){ //can set arbitrary handlers for other op b/c will never get called..
-		io_ops.get_handler = &ro_get_handler;
-		io_ops.put_handler = &wo_put_handler; 
-		io_ops.delete_handler = &delete_handler;
-
-	} else if (strcmp(iotype, "rw") == 0){ //readwrite
-		io_ops.get_handler = &rw_get_handler;
-		io_ops.put_handler = &rw_put_handler;
-		io_ops.delete_handler = &delete_handler;
-
-	} else {
-		fprintf(stderr, "Invalid argument, no workload type specified.\n");
-		return -1;
-	}
-	*/
+	printf("DEBUG: params are: %i (iotype), %d (batchsize), %d (io_size), %d (max iterations), %s (key file)\n", iotype, batchsize, io_size, max_iter, fname);
 
 	if (iotype == READ_ONLY || iotype == WRITE_ONLY){
 		io_ops.get_handler = &ro_get_handler;
@@ -423,6 +434,6 @@ int main(int argc, char *argv[]){
 
 	start_workload();
 
-	free(ctx);
+	//free(ctx);
 
 }
