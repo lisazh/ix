@@ -16,47 +16,45 @@
 #define DATA_SZ (LBA_SIZE - META_SZ)
 */
 
-struct freelist_ent { //TODO: keep this internal to this file..?
+struct freelist_ent { //keep this internal to this file..?
 	uint64_t start_lba;
 	uint64_t lba_count;
 	struct freelist_ent *next;	
 };
 
 static struct freelist_ent *freelist;
-//static struct freelist_ent *freelist[NUM_SZ_CLASS];
 
 
+/* Mark specified LBA range as occupied in the freelist
+ * Only used on start in index construction
+ */ 
 void alloc_block(uint64_t lba, uint64_t lba_count){
 	struct freelist_ent *ent = freelist;
 
-
 	while (ent->next){
-		if (ent->start_lba <= lba && (ent->start_lba + ent->lba_count) > lba)
+		if (ent->start_lba <= lba && (ent->start_lba + ent->lba_count) > lba) //
 			break;
-
 		ent = ent->next;
 	}
 
-	assert((ent->start_lba + ent->lba_count) > (lba + lba_count)); //allocation needs to be within the freelist entry
+	assert((ent->start_lba + ent->lba_count) >= (lba + lba_count)); //allocation needs to be within the freelist entry
 
+	// check ends
 	if (ent->start_lba == lba){
-		ent->start_lba += lba_count;
+		mark_used_blk(ent, lba_count);
+	} else if ((ent->start_lba + ent->lba_count) == (lba + lba_count)){
 		ent->lba_count -= lba_count;
 	} else { //need to split the entry
 
 		struct freelist_ent *newent = malloc(sizeof(struct freelist_ent));
 		newent->start_lba = (lba + lba_count);
-		newent->lba_count = ent->lba_count - lba_count;
+		newent->lba_count = ent->lba_count - lba_count - (lba - ent-start_lba);
+		newent->next = ent->next;
 
-		struct freelist_ent *tmp = ent->next;
 		ent->lba_count = lba - ent->start_lba;
 		ent->next = newent;
-		newent->next = tmp;
 
 	}
-
-
-
 
 }
 

@@ -206,9 +206,9 @@ void init_cb(void *arg){
 		assert(ent->val_len > 0);
 	
 		uint64_t blks = calc_numblks(ent->val_len);
-		struct index_ent *tmp = get_index_ent(ent->key);
+		struct index_ent *old = get_index_ent(ent->key);
 		
-		if ((tmp && tmp->version < ent->version)|| tmp == NULL){
+		if ((old && old->version < ent->version)|| old == NULL){
 			uint16_t tocheck_crc;
 
 			if (ent->val_len > DATA_SZ){
@@ -226,8 +226,7 @@ void init_cb(void *arg){
 			assert(ent->crc == tocheck_crc);
 			update_index(ent);
 			alloc_block(ent->lba, blks);
-			print_index();
-			print_freelist();
+
 		} else {
 			free(ent);
 		}
@@ -239,7 +238,8 @@ void init_cb(void *arg){
 		blks_read++; //skip to next block..
 		printf("DEBUG:Skipped, blocks so far is %d\n", blks_read);
 	}
-
+	print_index();
+	print_freelist();
 }
 
 
