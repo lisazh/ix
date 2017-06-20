@@ -59,11 +59,9 @@ struct ixev_conn_ops conn_ops = {
 };
 
 
-
 static void start_timer(char *key){
 	int ind = atoi(key) - 1;
 	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
-	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
 	struct timeval *timer = timers[ind];
 	if (gettimeofday(timer, NULL)){
 		fprintf(stderr, "Timer issue. \n");
@@ -73,10 +71,8 @@ static void start_timer(char *key){
 
 static void end_timer(char * key){
 	//printf("DEBUG: trying catch end time\n");
-	//struct timeval *newtime = malloc(sizeof(struct timeval));
 	int ind = atoi(key) - 1;
 	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
-	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
 	struct timeval *timer = timers[ind];
 	time_t old_secs = timer->tv_sec;
 	suseconds_t old_usecs = timer->tv_usec;
@@ -92,8 +88,36 @@ static void end_timer(char * key){
 	
 	printf("DEBUG: finishing timer for key %s with times %ld:%ld\n", key, timer->tv_sec, timer->tv_usec);
 	//free(newtime);
-
 }
+
+
+/*
+static void start_timer(int ind){
+	struct timeval *timer = timers[ind];
+	if (gettimeofday(timer, NULL)){
+		fprintf(stderr, "Timer issue. \n");
+		exit(1);
+	}
+}
+
+static void end_timer(int ind){
+
+	struct timeval *timer = timers[ind];
+	time_t old_secs = timer->tv_sec;
+	suseconds_t old_usecs = timer->tv_usec;
+
+	if (gettimeofday(timer, NULL)){
+		fprintf(stderr, "Timer issue.\n");
+		exit(1);
+	}
+
+	timer->tv_sec = timer->tv_sec - old_secs;
+	timer->tv_usec = timer->tv_usec - old_usecs;
+	
+	printf("DEBUG: finishing timer for key %s with times %ld:%ld\n", key, timer->tv_sec, timer->tv_usec);
+}
+*/
+
 
 static void flush_timers(){
 	FILE *res;
@@ -165,7 +189,7 @@ void get_keys(){
 		// null-terminate?
 		key[strcspn(key, "\n")] = '\0';
 		keys[i] = key;
-		printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
+		//printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
 	}
 	fclose(fkeys);
 
@@ -203,7 +227,8 @@ void batch_put(){
 
 	for (int i=0; i < batchsize; i++){
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
-		start_timer(keys[i]);
+		//start_timer(atoi(keys[i]) - 1);
+		start_timer(keys[i]);	
 		curr_iter++;
 	}
 }
@@ -216,6 +241,7 @@ void batch_get(){
 	for (int i = 0; i < batchsize; i++){
 		ixev_get(keys[i]);
 		start_timer(keys[i]);
+		//start_timer(atoi(keys[i]) - 1); //keys start at zero..
 		curr_iter++;
 	}
 }
@@ -248,14 +274,10 @@ void flushandfree_timers(){
 }
 
 void cleanup(){
-	//printf("DEBUGG: debugging cleanup\n");
 	//flush_timers();
-	//printf("DEBUG: flushed timers\n");
 	//free(timers);
 	flushandfree_timers();
-	///printf("DEBUG: flushed & freed timers\n");
 	free_keys();
-	//printf("DEBUG: freed keys\n");
 
 	if (iotype == WRITE_ONLY || iotype == READ_WRITE)
 		free(iobuf);
@@ -272,7 +294,6 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 	ixev_get_done(data);
 
 	if (curr_iter < max_iter){
-		//batch_get();
 		int i = curr_iter++;
 		ixev_get(keys[i]);
 		start_timer(keys[i]);
@@ -286,18 +307,20 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 
 // callback for ixev_put in WRITE_ONLY workloads
 static void wo_put_handler(char *key, void *val){
-	//printf("DEBUG: trying to isolate crash\n");
 	resp_iter++;
-	//printf("DEBUG: incremented responses, %d\n", resp_iter);
 	end_timer(key);
+	//end_timer(atoi(key) * (curr_iter/batchsize) + 1);
+	
 	//printf("DEBUG: timer ended for key %s\n");
 	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++; 
 		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
+		start_timer(keys[i]);
+
 		//ixev_put(key, (void *)(iobuf + ((i % batchsize)*io_size)), io_size);
 		//printf("DEBUG: put issued for next key %s\n", keys[i]);
-		start_timer(keys[i]);
+		//start_timer(i);
 		///printf("DEBUG: timer started for next key %s\n", keys[i]);
 	} else if (resp_iter >= max_iter){
 		//printf("DEBUG: end reached on callback for key %s\n", key);
@@ -305,8 +328,7 @@ static void wo_put_handler(char *key, void *val){
 		exit(0);
 	}
 
-	if ((curr_iter % batchsize) == 0){
-		//printf("DEBUG: is this where it crashes?\n");
+	if ((resp_iter % batchsize) == 0){
 		generate_data(batchsize * io_size, iobuf);
 	}
 
@@ -317,7 +339,6 @@ static void wo_put_handler(char *key, void *val){
 static void rw_get_handler(char *key, void *data, size_t datalen){
 
 	ixev_get_done(data);
-
 	if (curr_iter < max_iter){
 
 

@@ -143,7 +143,6 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 		
 	//printf("DEBUG: writing %d (meta) + %d (data) + %d (zeros) bytes\n", META_SZ, len, numzeros);
 	
-	printf("DEBUG: current value of numblks is %d after adding val with %lu bytes\n", iobuf->numblks, len);
 	iobuf->usrkeys[currind] = key;
 	iobuf->currind++;
 
@@ -233,7 +232,7 @@ void io_write_cb(void *unused){
 		void *uaddr = iobuf->buf[i*SG_MULT + 1].base;
 		usys_io_wrote(iobuf->usrkeys[i], uaddr);
 
-		printf("DEBUG: updated index entry for %s at %p\n", iobuf->usrkeys[i], uaddr);
+		//printf("DEBUG: updated index entry for %s at %p\n", iobuf->usrkeys[i], uaddr);
 		iobuf->currbatch[i] = NULL; //update the pointer
 		iobuf->usrkeys[i] = NULL;
 

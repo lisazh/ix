@@ -201,7 +201,7 @@ static void ixev_timer_event(unsigned long cookie)
 
 static void ixev_io_read(char *key, void *data, size_t len)
 {
-	printf("ixev_io_read: key=%s, data =%d, bytes=%lu at addr %p\n", key, data, len, data);
+	printf("ixev_io_read: key=%s, data =%s, bytes=%lu at addr %p\n", key, data, len, data);
 	ixev_global_io_ops.get_handler(key, data, len);
 }
 

@@ -53,14 +53,16 @@ struct index_ent *get_index_ent(const char *key){
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *ret = indx[hashval];
 
-	//printf("DEBUG: looking for key %s with hash %lu\n", key, hashval);
+	printf("DEBUG: looking for key %s with hash %lu\n", key, hashval);
 
 	if (ret == NULL){ //no key found 
 		return ret;
 
 	} else if (strncmp(ret->key, key, strlen(key)) != 0) { //check chain
+		printf("DEBUG: traversing hash chain\n");
 		while (ret->next){
 			ret = ret->next;
+			printf("DEBUG: current key is %s\n", ret->key);
 			if (strncmp(ret->key, key, strlen(key)) == 0) {
 				break;
 			}
@@ -103,6 +105,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 	ret->magic = METAMAGIC;	
 	memset(ret->key, '\0', MAX_KEY_LEN);
 	strncpy(ret->key, key, strlen(key));
+	printf("DEBUG: key and entry key is %s and %s\n", key, ret->key);
 
 	//update metadata
 	ret->val_len = len;
