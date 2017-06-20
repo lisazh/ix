@@ -56,11 +56,13 @@ struct index_ent *get_index_ent(const char *key){
 	printf("DEBUG: looking for key %s with hash %lu\n", key, hashval);
 
 	if (ret == NULL){ //no key found 
+		printf("No entry found..\n");
 		return ret;
 
 	} else if (strncmp(ret->key, key, strlen(key)) != 0) { //check chain
-		printf("DEBUG: traversing hash chain\n");
+		printf("DEBUG: traversing hash chain for key %s\n", ret->key);
 		while (ret->next){
+			printf("DEBUG: looking at next entry in chain..\n"); 
 			ret = ret->next;
 			printf("DEBUG: current key is %s\n", ret->key);
 			if (strncmp(ret->key, key, strlen(key)) == 0) {
@@ -112,6 +114,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 	ret->crc = crc_data((uint8_t *)val, len);
 	ret->version = get_version(key) + 1;
 	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
+	ret->next = NULL;
 	return ret;
 }
 
@@ -206,6 +209,7 @@ void init_cb(void *arg){
 	//assert(ent->magic == METAMAGIC);
 	if (*tmp  == METAMAGIC){
 		memcpy(ent, arg, META_SZ);
+		ent->next = NULL;
 		printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
 		assert(ent->val_len > 0);
 	

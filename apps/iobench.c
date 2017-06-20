@@ -15,7 +15,7 @@
 #include <ixev.h>
 
 //#define MAX_KEYS 10
-#define MAX_KEY_LEN 4 //overwrite the internal value for benchmarking..
+#define MAX_KEY_LEN 5 //overwrite the internal value for benchmarking..
  						// can test longer keys but whatever..
 #define DEF_IO_SIZE 128
 
@@ -61,6 +61,7 @@ struct ixev_conn_ops conn_ops = {
 
 static void start_timer(char *key){
 	int ind = atoi(key) - 1;
+	printf("DEBUG: timer index is %s (str) %d (int) \n", key, ind);
 	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
 	struct timeval *timer = timers[ind];
 	if (gettimeofday(timer, NULL)){
@@ -118,7 +119,7 @@ static void end_timer(int ind){
 }
 */
 
-
+/*
 static void flush_timers(){
 	FILE *res;
 
@@ -129,14 +130,14 @@ static void flush_timers(){
 	}
 
 	for (int i = 0; i < max_iter; i++){ //TODO double check format..
-		struct timeval *timer = (timers + (i * sizeof(struct timeval)));
+		//struct timeval *timer = (timers + (i * sizeof(struct timeval)));
 		fprintf(res, "%d,%ld:%ld\n", i+1, timer->tv_sec, timer->tv_usec);
 	}	 
 
 	fclose(res);
 
 }
-
+*/
 /* Generates dummy data according to size 
  * super dumb version for now...improve later.
  */
@@ -189,8 +190,9 @@ void get_keys(){
 		// null-terminate?
 		key[strcspn(key, "\n")] = '\0';
 		keys[i] = key;
-		//printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
+		printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
 	}
+	printf("DEBUG: finished reading %d keys; last one is %s\n", max_iter, keys[max_iter - 1]);
 	fclose(fkeys);
 
 }
@@ -307,6 +309,8 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 
 // callback for ixev_put in WRITE_ONLY workloads
 static void wo_put_handler(char *key, void *val){
+	
+	printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	resp_iter++;
 	end_timer(key);
 	//end_timer(atoi(key) * (curr_iter/batchsize) + 1);
@@ -315,7 +319,9 @@ static void wo_put_handler(char *key, void *val){
 	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++; 
+		printf("DEBUG: issuing put for index %d, curr_iter is %d\n", i, curr_iter);
 		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
+		printf("DEBUG: about to start timer for key %s..\n", keys[i]);
 		start_timer(keys[i]);
 
 		//ixev_put(key, (void *)(iobuf + ((i % batchsize)*io_size)), io_size);
@@ -323,7 +329,7 @@ static void wo_put_handler(char *key, void *val){
 		//start_timer(i);
 		///printf("DEBUG: timer started for next key %s\n", keys[i]);
 	} else if (resp_iter >= max_iter){
-		//printf("DEBUG: end reached on callback for key %s\n", key);
+		printf("DEBUG: end reached on callback for key %s\n", key);
 		cleanup();
 		exit(0);
 	}
@@ -332,7 +338,7 @@ static void wo_put_handler(char *key, void *val){
 		generate_data(batchsize * io_size, iobuf);
 	}
 
-	//printf("DEBUG: reached end of key %s callback no issue\n", key);
+	printf("DEBUG: reached end of key %s callback no issue\n", key);
 
 }
 
