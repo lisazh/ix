@@ -90,7 +90,7 @@ lbasz_t calc_numblks(uint64_t data_len){
 	lbasz_t ret = 1; //minimum one block 
 	if (data_len > DATA_SZ)
 		ret += ((data_len - DATA_SZ) + LBA_SIZE - 1) / LBA_SIZE;
-	printf("DEBUG: calc numblks returning %u for data of length %lu\n", ret, data_len);
+	//printf("DEBUG: calc numblks returning %u for data of length %lu\n", ret, data_len);
 	return ret;
 }
 

@@ -61,8 +61,8 @@ struct ixev_conn_ops conn_ops = {
 
 
 static void start_timer(char *key){
-	//int ind = atoi(key) - 1;
-	int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
+	int ind = atoi(key) - 1;
+	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
 	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
 	struct timeval *timer = timers[ind];
 	if (gettimeofday(timer, NULL)){
@@ -74,8 +74,8 @@ static void start_timer(char *key){
 static void end_timer(char * key){
 	//printf("DEBUG: trying catch end time\n");
 	//struct timeval *newtime = malloc(sizeof(struct timeval));
-	//int ind = atoi(key) - 1;
-	int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
+	int ind = atoi(key) - 1;
+	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
 	//struct timeval *timer = (timers + (ind * sizeof(struct timeval)));
 	struct timeval *timer = timers[ind];
 	time_t old_secs = timer->tv_sec;
@@ -131,7 +131,7 @@ void generate_data(size_t datasize, char *buf){
 		buf[i] = 'a';		
 	}
 	buf[datasize] = '\0';
-	//printf("DEBUG: data generated is %s\n", buf);
+	printf("DEBUG: data generated is %s at %p\n", buf, buf);
 }
 
 void get_keys(){
@@ -165,7 +165,7 @@ void get_keys(){
 		// null-terminate?
 		key[strcspn(key, "\n")] = '\0';
 		keys[i] = key;
-		//printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
+		printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
 	}
 	fclose(fkeys);
 
@@ -294,10 +294,10 @@ static void wo_put_handler(char *key, void *val){
 	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++; 
-		//ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
-		ixev_put(key, (void *)(iobuf + ((i % batchsize)*io_size)), io_size);
+		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
+		//ixev_put(key, (void *)(iobuf + ((i % batchsize)*io_size)), io_size);
 		//printf("DEBUG: put issued for next key %s\n", keys[i]);
-		start_timer(key);
+		start_timer(keys[i]);
 		///printf("DEBUG: timer started for next key %s\n", keys[i]);
 	} else if (resp_iter >= max_iter){
 		//printf("DEBUG: end reached on callback for key %s\n", key);
