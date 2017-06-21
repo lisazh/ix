@@ -16,7 +16,6 @@
 
 //#define MAX_KEYS 10
 #define MAX_KEY_LEN 5 //overwrite the internal value for benchmarking..
- 						// can test longer keys but whatever..
 #define DEF_IO_SIZE 128
 
 enum {
@@ -30,18 +29,18 @@ enum {
 struct ixev_io_ops io_ops;
 char *iobuf;
 char **keys;
+struct timeval **timers;
 
 int curr_iter = 0;
 int resp_iter = 0; //
 
 //input params -- default values for all
 uint8_t iotype;
-int batchsize = 1; //default
+int batchsize = 1;
 int io_size = DEF_IO_SIZE; //writes only
 char *fname = "keys.ix";
 int max_iter = 4;
 
-struct timeval **timers;
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
 {
@@ -71,7 +70,6 @@ static void start_timer(char *key){
 }
 
 static void end_timer(char * key){
-	//printf("DEBUG: trying catch end time\n");
 	int ind = atoi(key) - 1;
 	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
 	struct timeval *timer = timers[ind];
@@ -88,7 +86,6 @@ static void end_timer(char * key){
 	timer->tv_usec = timer->tv_usec - old_usecs;
 	
 	printf("DEBUG: finishing timer for key %s with times %ld:%ld\n", key, timer->tv_sec, timer->tv_usec);
-	//free(newtime);
 }
 
 
@@ -172,12 +169,7 @@ void get_keys(){
 		fprintf(stderr, "Unable to open file %s\n", fname);
 		exit(1);
 	}
-	/*
-	for (int i = 0; i < MAX_KEYS; i++){
-		keys[i] = malloc(MAX_KEY_LEN);
-		printf("DEBUG: allocated memory for key %d at %p\n", i + 1, keys[i]);
-	}
-	*/
+
 	keys = malloc(sizeof(char *) * max_iter);
 
 	for (int i = 0; i < max_iter; i++){
@@ -187,12 +179,10 @@ void get_keys(){
 			fclose(fkeys);
 			exit(1);
 		}
-		// null-terminate?
-		key[strcspn(key, "\n")] = '\0';
+		key[strcspn(key, "\n")] = '\0'; //remove trailing \n
 		keys[i] = key;
-		printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
+		//printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
 	}
-	printf("DEBUG: finished reading %d keys; last one is %s\n", max_iter, keys[max_iter - 1]);
 	fclose(fkeys);
 
 }
@@ -229,7 +219,6 @@ void batch_put(){
 
 	for (int i=0; i < batchsize; i++){
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
-		//start_timer(atoi(keys[i]) - 1);
 		start_timer(keys[i]);	
 		curr_iter++;
 	}
@@ -243,7 +232,6 @@ void batch_get(){
 	for (int i = 0; i < batchsize; i++){
 		ixev_get(keys[i]);
 		start_timer(keys[i]);
-		//start_timer(atoi(keys[i]) - 1); //keys start at zero..
 		curr_iter++;
 	}
 }
@@ -260,19 +248,22 @@ void flushandfree_timers(){
 	FILE *res;
 
 	//TODO uniquely identify results file on every run..
-	if ((res = fopen("results.ix", "w")) == NULL){
+	char fname[20];
+	strcpy(fname, "results_");
+	sprintf((fname + 8), "%d_%d", batchsize, max_iter/batchsize);
+	strcat(fname, ".ix\0");
+	if ((res = fopen(fname, "w")) == NULL){
 		fprintf(stderr, "Unable to open file %s\n", fname);
 		exit(1);
 	}
 
-	for (int i = 0; i < max_iter; i++){ //TODO double check format..
+	for (int i = 0; i < max_iter; i++){
 		fprintf(res, "%d,%ld:%ld\n", i+1, timers[i]->tv_sec, timers[i]->tv_usec);
 		free(timers[i]);
 	}	 
 
 	fclose(res);
 	free(timers);
-
 }
 
 void cleanup(){
@@ -313,21 +304,12 @@ static void wo_put_handler(char *key, void *val){
 	printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	resp_iter++;
 	end_timer(key);
-	//end_timer(atoi(key) * (curr_iter/batchsize) + 1);
-	
-	//printf("DEBUG: timer ended for key %s\n");
-	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++; 
-		printf("DEBUG: issuing put for index %d, curr_iter is %d\n", i, curr_iter);
+		//printf("DEBUG: issuing put for index %d, curr_iter is %d\n", i, curr_iter);
 		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
-		printf("DEBUG: about to start timer for key %s..\n", keys[i]);
+		//printf("DEBUG: about to start timer for key %s..\n", keys[i]);
 		start_timer(keys[i]);
-
-		//ixev_put(key, (void *)(iobuf + ((i % batchsize)*io_size)), io_size);
-		//printf("DEBUG: put issued for next key %s\n", keys[i]);
-		//start_timer(i);
-		///printf("DEBUG: timer started for next key %s\n", keys[i]);
 	} else if (resp_iter >= max_iter){
 		printf("DEBUG: end reached on callback for key %s\n", key);
 		cleanup();
@@ -337,7 +319,6 @@ static void wo_put_handler(char *key, void *val){
 	if ((resp_iter % batchsize) == 0){
 		generate_data(batchsize * io_size, iobuf);
 	}
-
 	printf("DEBUG: reached end of key %s callback no issue\n", key);
 
 }
@@ -370,7 +351,7 @@ static void rw_put_handler(char *key, void *val){
 
 }
 
-//dummy for now..
+//dummy
 static void delete_handler(char *key){ }
 
 void start_workload(){
@@ -379,7 +360,6 @@ void start_workload(){
 	get_keys();
 
 	init_timers();
-	//timers = malloc(sizeof(struct timeval *) * (max_iter));
 
 	if (iotype == READ_ONLY){
 		batch_get();
@@ -398,37 +378,10 @@ void start_workload(){
 int main(int argc, char *argv[]){
 	
 	if (argc < 3){
-		fprintf(stderr, "USAGE: <IO type> <batch size> <-n # runs>\n");
+		fprintf(stderr, "USAGE: <IO type> <batch size> <# runs>\n");
 		exit(1);
 	}
 	int numruns = 0;
-	//int opt;
-	//strncpy(iotype, argv[1], 2);
-	//batchsize = atoi(argv[2]);
-	//strncpy(fname, argv[3], strlen(argv[3]));
-	/*		
-	while ((opt = getopt(argc, argv, "tb:ns::")) != -1){
-		switch(opt)
-		{
-			case 't':
-				iotype = atoi(optarg);
-				break;
-			case 'b':
-				batchsize = atoi(optarg);
-				break;
-			case 'n':
-				numruns  = atoi(optarg);
-				break;
-			case 's':
-				io_size = atoi(optarg);
-				break;
-
-			default:
-				printf("USAGE: [-t IO type] [-b batch size] [-n num_runs] [-s IO size] [-f filename]\n"); //batch size? also how to bound length of execution? time bound or IOPS
-				exit(1);
-		}
-
-	}*/
 
 	iotype = atoi(argv[1]);
 	batchsize = atoi(argv[2]);
@@ -437,7 +390,6 @@ int main(int argc, char *argv[]){
 	max_iter = numruns * batchsize;
 
 	printf("DEBUG: params are: %i (iotype), %d (batchsize), %d (io_size), %d (max iterations), %s (key file)\n", iotype, batchsize, io_size, max_iter, fname);
-	printf("DEBUG: current and response iterations are %d and %d\n", curr_iter, resp_iter);	
 
 	if (iotype == READ_ONLY || iotype == WRITE_ONLY){
 		io_ops.get_handler = &ro_get_handler;
@@ -456,7 +408,6 @@ int main(int argc, char *argv[]){
 	struct ixev_ctx *ctx;
 	ctx = malloc(sizeof(struct ixev_ctx));
 
-	//Call ixev_init
 	ixev_init(&conn_ops);
 	ixev_init_io(&io_ops);
 	ixev_ctx_init(ctx); //is this always necessary..? 
@@ -469,6 +420,6 @@ int main(int argc, char *argv[]){
 
 	start_workload();
 
-	//free(ctx);
+	free(ctx);
 
 }
