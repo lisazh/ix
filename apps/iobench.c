@@ -71,7 +71,7 @@ static void start_timer(char *key){
 
 static void end_timer(char * key){
 	int ind = atoi(key) - 1;
-	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
+
 	struct timeval *timer = timers[ind];
 	time_t old_secs = timer->tv_sec;
 	suseconds_t old_usecs = timer->tv_usec;
@@ -377,8 +377,8 @@ void start_workload(){
 
 int main(int argc, char *argv[]){
 	
-	if (argc < 3){
-		fprintf(stderr, "USAGE: <IO type> <batch size> <# runs>\n");
+	if (argc < 4){
+		fprintf(stderr, "USAGE: <IO type> <batch size> <# runs> <io_size>\n");
 		exit(1);
 	}
 	int numruns = 0;
@@ -386,6 +386,7 @@ int main(int argc, char *argv[]){
 	iotype = atoi(argv[1]);
 	batchsize = atoi(argv[2]);
 	numruns = atoi(argv[3]);
+	io_size = (argc >= 4) ? atoi(argv[4]) : io_size;
 
 	max_iter = numruns * batchsize;
 

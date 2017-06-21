@@ -11,6 +11,9 @@
 #include <ix/blk.h>
 #include <ix/mbuf.h>
 
+//for profiling index construction
+#include <sys/time.h>
+
 // for CRC
 #define CRC_POLYNOM 0x1021
 #define CRC_WIDTH 16
@@ -265,14 +268,35 @@ void index_init(){
 	printf("DEBUG: attempting to read from device..\n"); 
 	char *buf = malloc(LBA_SIZE);
 	
+	//#TIMER STUFF
+	struct timeval *timer = malloc(sizeof(struct timeval));
+	if (gettimeofday(timer, NULL)){
+		fprintf(stderr, "Timer issue. \n");
+		exit(1);
+	}
+	//#
+
+
 	while(blks_read < MAX_LBA_NUM){
 		//printf("DEBUG: about to issue read..\n");
 		dummy_dev_read(buf, blks_read, 1, dummy_cb, NULL);		
 		init_cb(buf);
 	}
 
-	//dummy_dev_read(buf, blks_read, 1, init_cb_oneblk, buf); 
 	free(buf);
+
+	//#END TIMER STUFF
+	time_t old_secs = timer->tv_sec;
+	suseconds_t old_usecs = timer->tv_usec;
+
+	if (gettimeofday(timer, NULL)){
+		fprintf(stderr, "Timer issue.\n");
+		exit(1);
+	}	
+
+	timer->tv_sec = timer->tv_sec - old_secs;
+	timer->tv_usec = timer->tv_usec - old_usecs;
+	//#
 	
 }
 
