@@ -30,6 +30,7 @@ struct ixev_io_ops io_ops;
 char *iobuf;
 char **keys;
 struct timeval **timers;
+struct timeval glob_timer;
 
 int curr_iter = 0;
 int resp_iter = 0; //
@@ -245,6 +246,20 @@ void init_timers(){
 }
 
 void flushandfree_timers(){
+
+	time_t gsecs = glob_timer.tv_sec;
+	suseconds_t gusecs = glob_timer.tv_usec;
+
+	if (gettimeofday(&glob_timer, NULL)){
+		fprintf(stderr, "Timer issue.\n");
+		exit(1);
+	}	
+
+	//struct timeval *timer = &(timers[atoi(key)]);
+	glob_timer.tv_sec = glob_timer.tv_sec - gsecs;
+	glob_timer.tv_usec = glob_timer.tv_usec - gusecs;
+	
+
 	FILE *res;
 
 	//TODO uniquely identify results file on every run..
@@ -256,6 +271,8 @@ void flushandfree_timers(){
 		fprintf(stderr, "Unable to open file %s\n", fname);
 		exit(1);
 	}
+
+	fprintf(res, "Overall time: %ld:%ld\n", glob_timer.gsecs, glob_timer.gusecs);
 
 	for (int i = 0; i < max_iter; i++){
 		fprintf(res, "%d,%ld:%ld\n", i+1, timers[i]->tv_sec, timers[i]->tv_usec);
@@ -360,6 +377,11 @@ void start_workload(){
 	get_keys();
 
 	init_timers();
+
+	if (gettimeofday(&glob_timer, NULL)){ //start global timer..
+		fprintf(stderr, "Timer issue.\n");
+		exit(1);
+	}	
 
 	if (iotype == READ_ONLY){
 		batch_get();
