@@ -61,14 +61,14 @@ struct ixev_conn_ops conn_ops = {
 
 
 static void start_timer(char *key){
-	printf("DEBUG: timer key index at %p\n", (void *)(key));
+	//printf("DEBUG: timer key index at %p\n", (void *)(key));
 	//int ind = atoi(key) - 1;
 	char *ptr;
 	long ind = strtol(key, &ptr, 10) - 1;
-	printf("DEBUG: timer index is %s (str) %ld (int) \n", key, ind);
+	//printf("DEBUG: timer index is %s (str) %ld (int) \n", key, ind);
 	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
 	struct timeval *timer = timers[ind];
-	printf("DEBUG: timer entry at %p\n", timer);
+	//printf("DEBUG: timer entry at %p\n", timer);
 	if (gettimeofday(timer, NULL)){
 		fprintf(stderr, "Timer issue. \n");
 		exit(1);
@@ -91,7 +91,7 @@ static void end_timer(char * key){
 	timer->tv_sec = timer->tv_sec - old_secs;
 	timer->tv_usec = timer->tv_usec - old_usecs;
 	
-	printf("DEBUG: finishing timer for key %s with times %ld:%ld\n", key, timer->tv_sec, timer->tv_usec);
+	//printf("DEBUG: finishing timer for key %s with times %ld:%ld\n", key, timer->tv_sec, timer->tv_usec);
 }
 
 
@@ -159,7 +159,7 @@ void generate_data(size_t datasize, char *buf){
 		buf[i] = 'a';		
 	}
 	buf[datasize] = '\0';
-	printf("DEBUG: data generated is %s at %p\n", buf, buf);
+	//printf("DEBUG: data generated is %s at %p\n", buf, buf);
 }
 
 void get_keys(){

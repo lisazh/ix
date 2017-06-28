@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 
+
+
 //#define NVME_AWUNPF 2048 //LTODO: will need to get this from "device" config or whatever
 #define DEVBLK_SIZE 1000000 // reasonable approximation of an erase block..
 //#define MAX_BATCH (DEVBLK_SIZE/LBA_SIZE) //LTODO move LBA_SIZE def from somewhere else 
@@ -49,6 +51,8 @@ static DEFINE_PERCPU(struct ibuf, batch_buf);
 static DEFINE_PERCPU(struct mempool, pending_req_mempool);
 static struct mempool_datastore pending_req_datastore;
 static char zerobuf[LBA_SIZE] = {0};
+
+struct timeval timer; //for debugging...
 
 int blkio_init(void)
 {
@@ -84,6 +88,10 @@ int blkio_init_cpu(void)
 }
 
 ssize_t bsys_io_read(char *key){
+
+	gettimeofday(&timer, NULL);
+	printf("DEBUG: entering read syscall handler at %ld microseconds\n", timer.tv_usec);
+
 	struct pending_req *pr;
 	struct index_ent *ent = get_index_ent(key);
 	if (!ent)
@@ -104,7 +112,16 @@ ssize_t bsys_io_read(char *key){
 	pr->len = ent->val_len;
 	pr->ents[0].base = mbuf_to_iomap(read_mbuf, mbuf_mtod(read_mbuf, void *));
 
+	gettimeofday(&timer, NULL);
+	printf("DEBUG: about to issue \"device\" read at %ld microseconds\n", timer.tv_usec);
+
 	dummy_dev_read(data, ent->lba, numblks, io_read_cb, pr);
+
+	gettimeofday(&timer, NULL);
+	printf("DEBUG: finished issuing device call at %ld microseconds\n", timer.tv_usec);
+
+
+
 
 	return 0;
 }
@@ -117,9 +134,6 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	struct index_ent *newdata = new_index_ent(key, val, len);
 	
 	assert(newdata->magic == METAMAGIC);
-	//newdata->val_len = len;
-	//newdata->crc = crc_data((uint8_t *)val, len);
-	//newdata->version = get_version(key) + 1;
 	
 	//printf("DEBUG: new metadata entry at %p with key %s at %p\n", (void *)newdata, newdata->key, (void *) newdata->key);
 	//printf("DEBUG: size of metadata structure is %lu\n", sizeof(struct index_ent));
@@ -128,9 +142,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
-	//printf("DEBUG: numblks is %u..\n", iobuf->numblks);
 	iobuf->numblks = iobuf->numblks + calc_numblks(len);
-	//printf("DEBUG: and now numblks is %u\n", iobuf->numblks);
+
 	iobuf->buf[currind*SG_MULT].base = newdata;
 	iobuf->buf[currind*SG_MULT].len = META_SZ;
 
@@ -175,7 +188,7 @@ ssize_t bsys_io_write_flush()
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 
 	if (!iobuf->numblks){ //check if there's anything to write
-		printf("DEBUG: no batched writes to issue\n");
+		//printf("DEBUG: no batched writes to issue\n");
 		return 0;
 	}
 	//debugprint_sg();
@@ -195,9 +208,16 @@ ssize_t bsys_io_write_flush()
 		}
 	}
 
+	gettimeofday(&timer, NULL);
+	printf("DEBUG: about to issue \"device\" write at %ld microseconds\n", timer.tv_usec);
+
 	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba,
 			iobuf->numblks, io_write_cb, NULL);
-	printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", iobuf->currind, startlba, iobuf->numblks);
+	
+	gettimeofday(&timer, NULL);
+	printf("DEBUG: issued write at %ld microseconds\n", timer.tv_usec);
+
+	//printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", iobuf->currind, startlba, iobuf->numblks);
 
 	return 0;
 }
@@ -219,7 +239,10 @@ ssize_t bsys_io_read_done(void *addr)
  * LTODO: what to pass in?
  */
 void io_write_cb(void *unused){
-	printf("DEBUG: reached callback\n");
+	
+	gettimeofday(&timer, NULL);
+	printf("DEBUG: reached write callback at %ld microseconds\n", timer.tv_usec);
+
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	//TODO: check status/error codes on completion..? or just assume always returns ok
 
@@ -255,6 +278,9 @@ void io_write_cb(void *unused){
 // TODO: unpack key, address and length from param
 void io_read_cb(void *arg)
 {
+	gettimeofday(&timer, NULL);
+	printf("DEBUG: reached read callback at %ld microseconds\n", timer.tv_usec);
+
 	struct pending_req *rq = (struct pending_req *)arg;
 
 	usys_io_read(rq->key, rq->ents[0].base, rq->len); //FIXME what if val longer..? 
