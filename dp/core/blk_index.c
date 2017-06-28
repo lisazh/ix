@@ -249,8 +249,8 @@ void init_cb(void *arg){
 		blks_read++; //skip to next block..
 		printf("DEBUG:Skipped, blocks so far is %d\n", blks_read);
 	}
-	print_index();
-	print_freelist();
+	//print_index();
+	//print_freelist();
 }
 
 
@@ -297,7 +297,9 @@ void index_init(){
 	timer->tv_sec = timer->tv_sec - old_secs;
 	timer->tv_usec = timer->tv_usec - old_usecs;
 	//#
-	
+	printf("DEBUG: index building took %ld: %ld\n", timer->tv_sec, timer->tv_usec);
+	print_index();
+	print_freelist();	
 }
 
 /* 

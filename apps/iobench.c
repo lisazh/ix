@@ -15,7 +15,7 @@
 #include <ixev.h>
 
 //#define MAX_KEYS 10
-#define MAX_KEY_LEN 5 //overwrite the internal value for benchmarking..
+#define MAX_KEY_LEN 6 //overwrite the internal value for benchmarking..
 #define DEF_IO_SIZE 128
 
 enum {
@@ -256,23 +256,26 @@ void flushandfree_timers(){
 	}	
 
 	//struct timeval *timer = &(timers[atoi(key)]);
-	glob_timer.tv_sec = glob_timer.tv_sec - gsecs;
-	glob_timer.tv_usec = glob_timer.tv_usec - gusecs;
+	int time_elapsed = ((glob_timer.tv_sec*1000000) + glob_timer.tv_usec ) - ((gsecs * 1000000) + gusecs);
+	//glob_timer.tv_sec = glob_timer.tv_sec - gsecs;
+	//glob_timer.tv_usec = glob_timer.tv_usec - gusecs;
 	
 
 	FILE *res;
 
 	//TODO uniquely identify results file on every run..
-	char fname[20];
+	char fname[25];
 	strcpy(fname, "results_");
-	sprintf((fname + 8), "%d_%d", batchsize, max_iter/batchsize);
+	sprintf((fname + 8), "%d_%d_%d", batchsize, max_iter/batchsize, io_size);
 	strcat(fname, ".ix\0");
 	if ((res = fopen(fname, "w")) == NULL){
 		fprintf(stderr, "Unable to open file %s\n", fname);
 		exit(1);
 	}
+	
+	//fprintf(res, "Overall time: %ld:%ld\n", glob_timer.tv_sec, glob_timer.tv_usec);
+	fprintf(res, "Overall time: %d microseconds\n", time_elapsed);	
 
-	fprintf(res, "Overall time: %ld:%ld\n", glob_timer.gsecs, glob_timer.gusecs);
 
 	for (int i = 0; i < max_iter; i++){
 		fprintf(res, "%d,%ld:%ld\n", i+1, timers[i]->tv_sec, timers[i]->tv_usec);
@@ -400,7 +403,7 @@ void start_workload(){
 int main(int argc, char *argv[]){
 	
 	if (argc < 4){
-		fprintf(stderr, "USAGE: <IO type> <batch size> <# runs> <io_size>\n");
+		fprintf(stderr, "USAGE: <IO type> <batch size> <# runs> [io_size]\n");
 		exit(1);
 	}
 	int numruns = 0;
@@ -408,7 +411,7 @@ int main(int argc, char *argv[]){
 	iotype = atoi(argv[1]);
 	batchsize = atoi(argv[2]);
 	numruns = atoi(argv[3]);
-	io_size = (argc >= 4) ? atoi(argv[4]) : io_size;
+	io_size = (argc > 4) ? atoi(argv[4]) : io_size;
 
 	max_iter = numruns * batchsize;
 

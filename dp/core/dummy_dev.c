@@ -12,7 +12,7 @@
 #include <ix/timer.h>
 
 #include <assert.h>
-
+#include <errno.h>
 static struct mempool_datastore timer_datastore;
 static DEFINE_PERCPU(struct mempool, timer_mempool);
 static DEFINE_PERCPU(char *, dummy_dev);
@@ -42,7 +42,10 @@ int dummy_dev_init(void)
 	int ret;
 	ret = mempool_create_datastore(&timer_datastore, 32*MAX_PENDING_TIMERS,
 				       sizeof(struct io_timer), 0, MEMPOOL_DEFAULT_CHUNKSIZE, "io_timer");
+	if (ret)
+		fprintf(stderr, "Could not create mempool datastore\n");
 	return ret;
+
 }
 
 int dummy_dev_init_cpu(void)
@@ -51,24 +54,29 @@ int dummy_dev_init_cpu(void)
 	void *vaddr;
 
 	fd = shm_open("/dummy-ssd", O_RDWR | O_CREAT, 0660);
-	if (fd == -1)
+	if (fd == -1){
+		fprintf(stderr, "Could not open dummy device\n");
 		return 1;
-
+		
+	}
 	ret = ftruncate(fd, STORAGE_SIZE);
-	if (ret)
+	if (ret){
+		fprintf(stderr, "Could not truncate dummy device\n");
 		return ret;
-
+	}
 	vaddr = mmap(NULL, STORAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (vaddr == MAP_FAILED)
+	if (vaddr == MAP_FAILED){
+		fprintf(stderr, "Could not mmap dummy device, reason: %s\n", strerror(errno));
 		return 1;
-
+	}
 	percpu_get(dummy_dev) = vaddr;
 
 	ret = mempool_create(&percpu_get(timer_mempool),
 			&timer_datastore, MEMPOOL_SANITY_PERCPU, percpu_get(cpu_id));
-	if (ret)
+	if (ret){
+		fprintf(stderr, "Could not get mempool for dummy device\n");
 		return ret;
-
+	}
 	return 0;
 }
 
