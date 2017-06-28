@@ -17,7 +17,7 @@ static struct mempool_datastore timer_datastore;
 static DEFINE_PERCPU(struct mempool, timer_mempool);
 static DEFINE_PERCPU(char *, dummy_dev);
 
-#define MAX_PENDING_TIMERS 1024
+#define MAX_PENDING_TIMERS 2048
 #define WRITE_DELAY 50
 #define READ_DELAY 10
 

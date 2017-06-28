@@ -15,7 +15,7 @@
 #include <ixev.h>
 
 //#define MAX_KEYS 10
-#define MAX_KEY_LEN 6 //overwrite the internal value for benchmarking..
+#define MAX_KEY_LEN 7 //overwrite the internal value for benchmarking..
 #define DEF_IO_SIZE 128
 
 enum {
@@ -61,10 +61,14 @@ struct ixev_conn_ops conn_ops = {
 
 
 static void start_timer(char *key){
-	int ind = atoi(key) - 1;
-	printf("DEBUG: timer index is %s (str) %d (int) \n", key, ind);
+	printf("DEBUG: timer key index at %p\n", (void *)(key));
+	//int ind = atoi(key) - 1;
+	char *ptr;
+	long ind = strtol(key, &ptr, 10) - 1;
+	printf("DEBUG: timer index is %s (str) %ld (int) \n", key, ind);
 	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
 	struct timeval *timer = timers[ind];
+	printf("DEBUG: timer entry at %p\n", timer);
 	if (gettimeofday(timer, NULL)){
 		fprintf(stderr, "Timer issue. \n");
 		exit(1);
@@ -183,7 +187,7 @@ void get_keys(){
 		}
 		key[strcspn(key, "\n")] = '\0'; //remove trailing \n
 		keys[i] = key;
-		//printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
+		printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
 	}
 	fclose(fkeys);
 
@@ -220,6 +224,7 @@ void batch_put(){
 	generate_data(batchsize * io_size, iobuf);
 
 	for (int i=0; i < batchsize; i++){
+		printf("DEBUG: putting from  %p\n", (void *)(iobuf + (i * io_size)));
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
 		start_timer(keys[i]);	
 		curr_iter++;

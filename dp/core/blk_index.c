@@ -55,6 +55,7 @@ uint16_t crc_data(uint8_t msg[], size_t len){
  */
 struct index_ent *get_index_ent(const char *key){
 
+	gettimeofday(&timer1, NULL);
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *ret = indx[hashval];
 
@@ -78,6 +79,11 @@ struct index_ent *get_index_ent(const char *key){
 			return NULL;
 		}
 	}
+	gettimeofday(&timer2, NULL);
+	printf("DEBUG: index searching took %d microseconds\n", (
+                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+
 	return ret;		
 }
 
@@ -110,7 +116,7 @@ lbasz_t calc_numblks(uint64_t data_len){
  */
 struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t len){
 	
-	gettimeofday(&timer1, NULL);
+	//gettimeofday(&timer1, NULL);
 
 	struct index_ent *ret = malloc(sizeof(struct index_ent));
 	ret->magic = METAMAGIC;	
@@ -125,10 +131,10 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	ret->next = NULL;
 
-	gettimeofday(&timer2, NULL);
-	printf("DEBUG: index entry creation took %d microseconds\n", (
-		TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
-		TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	//gettimeofday(&timer2, NULL);
+	//printf("DEBUG: index entry creation took %d microseconds\n", (
+		//TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
+		//TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	return ret;
 }
