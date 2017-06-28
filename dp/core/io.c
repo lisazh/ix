@@ -16,6 +16,7 @@
 #include <ix/mempool.h>
 
 #include <stdio.h>
+#include <sys/time.h>
 
 //#define NVME_AWUNPF 2048 //LTODO: will need to get this from "device" config or whatever
 #define DEVBLK_SIZE 1000000 // reasonable approximation of an erase block..
@@ -23,6 +24,7 @@
 #define MAX_BATCH 1024 //FOR TESTING FIX LATER
 #define SG_MULT 3 //number of sg entries needed per write (LTODO change to 3 eventually)
 // LTODO: for each write need 3 entries: meta, data, zeros ()
+
 #define READ_BATCH 8 // number of buffers per read - 2KB per buffer
 #define MAX_PENDING_REQ 1024
 

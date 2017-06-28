@@ -23,6 +23,8 @@
 //#define SCAN_BATCH (MBUF_DATA_LEN/LBA_SIZE)
 
 int blks_read; //used later in index_init
+struct timeval timer1;
+struct timeval timer2;
 
 // wrapper function, in case we decide to change the hash...
 uint64_t hashkey(const char *key, size_t keylen){
@@ -90,7 +92,8 @@ uint16_t get_version(const char *key){
 
 /* 
  * helper function for determining how many blocks the data should occupy
- * assumes data_len is never zero..	
+ * assumes data_len is never zero..
+ * TODO: MOVE TO MACRO 	
  */
 lbasz_t calc_numblks(uint64_t data_len){
 	//uint64_t ret = (data_len + DATA_SZ - 1) / DATA_SZ; //short way;
@@ -106,6 +109,9 @@ lbasz_t calc_numblks(uint64_t data_len){
  *
  */
 struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t len){
+	
+	gettimeofday(&timer1, NULL);
+
 	struct index_ent *ret = malloc(sizeof(struct index_ent));
 	ret->magic = METAMAGIC;	
 	memset(ret->key, '\0', MAX_KEY_LEN);
@@ -118,6 +124,12 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 	ret->version = get_version(key) + 1;
 	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	ret->next = NULL;
+
+	gettimeofday(&timer2, NULL);
+	printf("DEBUG: index entry creation took %d microseconds\n", (
+		TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
+		TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+
 	return ret;
 }
 
@@ -126,6 +138,8 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
  * Either replace (and free) old entry corresponding to the same key or insert it anew.
  */
 void update_index(struct index_ent *meta){
+
+	gettimeofday(&timer1, NULL);
 
 	char *key = meta->key;
 
@@ -161,6 +175,12 @@ void update_index(struct index_ent *meta){
 		//printf("DEBUG: inserting key %s with hash %lu\n", key, hashval);
 		indx[hashval] = meta;
 	}
+
+	gettimeofday(&timer2, NULL);
+	printf("DEBUG: index update took %d microseconds\n", (
+		TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
+		TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+
 }
 
 /*

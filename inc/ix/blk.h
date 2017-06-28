@@ -21,6 +21,10 @@
 
 #define METAMAGIC 0xd006
 
+//random
+#define TIMETOMICROS(ts, tu) ((1000000 * ts) + tu)
+
+
 typedef int32_t lba_t; //typedef'd in case we change the size...used to be 64bit but truncated for now..
 typedef uint32_t lbasz_t;
 
