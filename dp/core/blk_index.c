@@ -126,6 +126,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
  * Either replace (and free) old entry corresponding to the same key or insert it anew.
  */
 void update_index(struct index_ent *meta){
+
 	char *key = meta->key;
 
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;

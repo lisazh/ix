@@ -31,6 +31,7 @@ char *iobuf;
 char **keys;
 struct timeval **timers;
 struct timeval glob_timer;
+//struct timeval newtimer;
 
 int curr_iter = 0;
 int resp_iter = 0; //
@@ -266,7 +267,8 @@ void flushandfree_timers(){
 	//TODO uniquely identify results file on every run..
 	char fname[25];
 	strcpy(fname, "results_");
-	sprintf((fname + 8), "%d_%d_%d", batchsize, max_iter/batchsize, io_size);
+	sprintf((fname + 8), "%c_", (iotype == READ_ONLY) ? 'r' : 'w');
+	sprintf((fname + 10), "%d_%d_%d", batchsize, max_iter/batchsize, io_size);
 	strcat(fname, ".ix\0");
 	if ((res = fopen(fname, "w")) == NULL){
 		fprintf(stderr, "Unable to open file %s\n", fname);
@@ -322,6 +324,8 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 static void wo_put_handler(char *key, void *val){
 	
 	printf("DEBUG: callback reached for key %s at %p\n", key, key);
+	//gettimeofday(&newtimer, NULL); //whatever
+        //printf("DEBUG: reaching timer at %ld: %ld \n", newtimer.tv_sec, newtimer.tv_usec);
 	resp_iter++;
 	end_timer(key);
 	if (curr_iter < max_iter){
@@ -385,6 +389,8 @@ void start_workload(){
 		fprintf(stderr, "Timer issue.\n");
 		exit(1);
 	}	
+	//gettimeofday(&newtimer, NULL); //whatever
+	//printf("DEBUG: starting timer at %ld: %ld \n", newtimer.tv_sec, newtimer.tv_usec);
 
 	if (iotype == READ_ONLY){
 		batch_get();
