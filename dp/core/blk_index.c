@@ -53,10 +53,16 @@ uint16_t crc_data(uint8_t msg[], size_t len){
  * returns NULL if key is not in the index..
  * TODO: look @ bloom filter to optimize membership testing..
  */
-struct index_ent *get_index_ent(const char *key){
+struct index_ent *get_index_ent(char *key){
 
 	gettimeofday(&timer1, NULL);
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
+	gettimeofday(&timer2, NULL);
+
+	printf("DEBUG: key hash took %d microseconds\n", (
+                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	
 	struct index_ent *ret = indx[hashval];
 
 	printf("DEBUG: looking for key %s with hash %lu\n", key, hashval);
@@ -79,10 +85,10 @@ struct index_ent *get_index_ent(const char *key){
 			return NULL;
 		}
 	}
-	gettimeofday(&timer2, NULL);
-	printf("DEBUG: index searching took %d microseconds\n", (
-                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
-                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	//gettimeofday(&timer2, NULL);
+	//printf("DEBUG: index searching took %d microseconds\n", (
+                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+                //TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	return ret;		
 }
@@ -116,25 +122,36 @@ lbasz_t calc_numblks(uint64_t data_len){
  */
 struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t len){
 	
-	//gettimeofday(&timer1, NULL);
+	gettimeofday(&timer1, NULL);
 
 	struct index_ent *ret = malloc(sizeof(struct index_ent));
 	ret->magic = METAMAGIC;	
 	memset(ret->key, '\0', MAX_KEY_LEN);
 	strncpy(ret->key, key, strlen(key));
-	printf("DEBUG: key and entry key is %s and %s\n", key, ret->key);
+	//printf("DEBUG: key and entry key is %s and %s\n", key, ret->key);
+	
+	gettimeofday(&timer2, NULL);
+	printf("DEBUG: index entry setup (malloc & copy) took %d microseconds\n", (
+                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	//update metadata
 	ret->val_len = len;
 	ret->crc = crc_data((uint8_t *)val, len);
+	
+	gettimeofday(&timer1, NULL);
+	printf("DEBUG: index entry CRC took %d microseconds\n", (
+                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec) -
+                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec)));
+
 	ret->version = get_version(key) + 1;
 	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	ret->next = NULL;
 
-	//gettimeofday(&timer2, NULL);
-	//printf("DEBUG: index entry creation took %d microseconds\n", (
-		//TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
-		//TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	gettimeofday(&timer2, NULL);
+	printf("DEBUG: index entry creation (rest) took %d microseconds\n", (
+		TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
+		TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	return ret;
 }
@@ -152,6 +169,7 @@ void update_index(struct index_ent *meta){
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *oldent = indx[hashval];
 	if (oldent != NULL){
+		printf("DEBUG: examining existing index for update..\n");
 		if (strncmp(oldent->key, key, strlen(key)) != 0){ //walk chain..
 			struct index_ent *prev = oldent;
 			oldent = oldent->next;
