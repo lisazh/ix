@@ -15,7 +15,7 @@
 #define MAX_LBA_NUM (STORAGE_SIZE/LBA_SIZE/32) //TODO: THIS IS TEMPORARY...need to determine real value..
 
 // ideally want key length + rest of metadata no more than 128 bytes (1/4 of a block)
-#define MAX_KEY_LEN 110
+#define MAX_KEY_LEN 108
 #define META_SZ ((144/8) + MAX_KEY_LEN) //in bytes LTODO: find less hardcode-y way to determine
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
@@ -34,7 +34,8 @@ struct index_ent {
 	lba_t lba;
 	uint64_t val_len; //length of value in BYTES
 	//uint64_t lba_count;
-	uint16_t crc;
+	//uint16_t crc;
+	uint32_t crc;
 	uint16_t version;
 	struct index_ent *next; //for hash chaining..
 } __packed;
@@ -42,35 +43,23 @@ struct index_ent {
 static struct index_ent *indx[MAX_ENTRIES];
 
 /* free list management */
-
-void alloc_block(lba_t lba, lbasz_t lba_count);
-
 lba_t get_blk(lbasz_t num_blks);
-
+void alloc_block(lba_t lba, lbasz_t lba_count);
 void free_blk(lba_t lba, lbasz_t num_blks);
-
 void freelist_init();
-
 void print_freelist(); //for debugging..
 
 /* index management */
-//uint16_t crc_data(uint8_t msg[], size_t len);
-
+void index_init();
 lbasz_t calc_numblks(uint64_t data_len);
-
 struct index_ent *get_index_ent(const char *key);
-
 struct index_ent *new_index_ent(const char *key, const void *val, uint64_t len);
-
-//uint16_t get_version(const char *key);
-
 void update_index(struct index_ent *meta);
-
+//uint16_t get_version(const char *key);
 //struct index_ent *insert_key(char *key, ssize_t val_len);
 
-void delete_key(char *key);
+void delete_key(char *key); //unused for now...
 
-void index_init();
 
 
 
