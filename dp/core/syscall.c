@@ -11,7 +11,6 @@
  *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -123,9 +122,8 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 			return ret;
 	}
 
-	//LTODO: issue batched write here...
+	//issue batched write at the end of processing all sys calls
 	bsys_io_write_flush();
-
 	return 0;
 }
 
@@ -138,6 +136,7 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
  */
 static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
+	log_info("Entering bpoll at %lu\n", rdtsc());
 	int ret, empty;
 
 	usys_reset();
@@ -179,11 +178,14 @@ again:
 	cpu_do_bookkeeping();
 	KSTATS_POP(NULL);
 
+	log_info("Timer stuff at %lu\n", rdtsc());
+
 	KSTATS_PUSH(timer, NULL);
 	timer_run();
 	unset_current_fg();
 	KSTATS_POP(NULL);
-
+	log_info("End timer stuff at %lu\n", rdtsc());
+	
 	KSTATS_PUSH(rx_poll, NULL);
 	eth_process_poll();
 	KSTATS_POP(NULL);
@@ -196,6 +198,8 @@ again:
 	eth_process_send();
 	KSTATS_POP(NULL);
 
+	log_info("Check conditions to go to top at %lu\n", rdtsc());
+	log_info("NR is %d, usys array length is %d\n", nr, percpu_get(usys_arr)->len);
 	if (!nr && !percpu_get(usys_arr)->len) {
 		/* Do not idle if control plane sets the no_idle flag. */
 		if (empty && !percpu_get(cp_cmd)->no_idle) {
@@ -205,7 +209,7 @@ again:
 				KSTATS_PUSH(idle, NULL);
 
 				start = rdtsc();
-				eth_rx_idle_wait(deadline);
+				//eth_rx_idle_wait(deadline);
 				percpu_get(idle_cycles) += rdtsc() - start;
 				KSTATS_POP(NULL);
 			}
@@ -217,7 +221,7 @@ again:
 
 		goto again;
 	}
-
+	log_info("exiting bpoll at %lu\n", rdtsc());
 	return 0;
 }
 

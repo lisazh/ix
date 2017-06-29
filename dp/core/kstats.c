@@ -40,7 +40,7 @@
 #include <ix/log.h>
 #include <ix/timer.h>
 
-#define KSTATS_INTERVAL (5 * ONE_SECOND)
+#define KSTATS_INTERVAL (2500* ONE_US)
 
 DEFINE_PERCPU(kstats, _kstats);
 DEFINE_PERCPU(kstats_accumulate, _kstats_accumulate);

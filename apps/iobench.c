@@ -140,7 +140,7 @@ void get_keys(){
 		}
 		key[strcspn(key, "\n")] = '\0'; //remove trailing \n
 		keys[i] = key;
-		printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
+		//printf("DEBUG: alloc'd and read key %s at %p\n", keys[i], keys[i]); 
 	}
 	fclose(fkeys);
 
@@ -177,7 +177,7 @@ void batch_put(){
 	generate_data(batchsize * io_size, iobuf);
 
 	for (int i=0; i < batchsize; i++){
-		printf("DEBUG: putting from  %p\n", (void *)(iobuf + (i * io_size)));
+		//printf("DEBUG: putting from  %p\n", (void *)(iobuf + (i * io_size)));
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
 		start_timer(keys[i]);	
 		curr_iter++;
@@ -281,7 +281,7 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 // callback for ixev_put in WRITE_ONLY workloads
 static void wo_put_handler(char *key, void *val){
 	
-	printf("DEBUG: callback reached for key %s at %p\n", key, key);
+	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
 	//gettimeofday(&newtimer, NULL); //whatever
         //printf("DEBUG: reaching timer at %ld: %ld \n", newtimer.tv_sec, newtimer.tv_usec);
 	resp_iter++;
@@ -293,7 +293,7 @@ static void wo_put_handler(char *key, void *val){
 		//printf("DEBUG: about to start timer for key %s..\n", keys[i]);
 		start_timer(keys[i]);
 	} else if (resp_iter >= max_iter){
-		printf("DEBUG: end reached on callback for key %s\n", key);
+		//printf("DEBUG: end reached on callback for key %s\n", key);
 		cleanup();
 		exit(0);
 	}
@@ -301,7 +301,7 @@ static void wo_put_handler(char *key, void *val){
 	if ((resp_iter % batchsize) == 0){
 		generate_data(batchsize * io_size, iobuf);
 	}
-	printf("DEBUG: reached end of key %s callback no issue\n", key);
+	//printf("DEBUG: reached end of key %s callback no issue\n", key);
 
 }
 

@@ -85,7 +85,7 @@ void mark_used_blk(struct freelist_ent *ent, lbasz_t num_blks){
 * also last ent guaranteed to be "rest of space" entry
 */ 
 lba_t get_blk(lbasz_t num_blks){
-	printf("DEBUG: trying to find space for %lu blocks\n", num_blks);
+	//printf("DEBUG: trying to find space for %lu blocks\n", num_blks);
 	print_freelist();
 	struct freelist_ent *iter = freelist;
 	//printf("DEBUG: entering loop\n");
@@ -94,7 +94,7 @@ lba_t get_blk(lbasz_t num_blks){
 			break;
 		iter = iter->next;
 	} 
-	printf("DEBUG: exited loop\n");
+	//printf("DEBUG: exited loop\n");
 	
 	if (iter == NULL)
 		printf("DEBUG: reached end without finding space.. \n");
