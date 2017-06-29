@@ -48,6 +48,17 @@ uint16_t crc_data(uint8_t msg[], size_t len){
  	return crc;
 }
 
+uint16_t new_crc_data(char* msg, size_t len){
+    long crc = ~0;
+    crc ^= *msg++;
+    
+    while (len--)
+        crc = crc & 1 ? (crc >> 1) ^ CRC_POLYNOM : crc >> 1;
+
+    return ~crc;
+}
+
+
 /*
  * Given key, return LBA mapping
  * returns NULL if key is not in the index..
@@ -94,11 +105,46 @@ struct index_ent *get_index_ent(char *key){
 }
 
 uint16_t get_version(const char *key){
-	struct index_ent *ent = get_index_ent(key);
-	if (ent == NULL)
+	struct index_ent *ent = get_index_ent(key);		
+	//uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
+
+	if (indx[hashval] == NULL)
 		return 0;
 	else 
 		return ent->version;
+
+}
+
+uint16_t get_version2(const char *key){
+
+	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;	
+	struct index_ent *ret = indx[hashval];
+
+	if (ret == NULL){ //no key found 
+		printf("No entry found..\n");
+		return 0;
+
+	} else if (strncmp(ret->key, key, strlen(key)) != 0) { //check chain
+		printf("DEBUG: traversing hash chain for key %s\n", ret->key);
+		while (ret->next){
+			printf("DEBUG: looking at next entry in chain..\n"); 
+			ret = ret->next;
+			printf("DEBUG: current key is %s\n", ret->key);
+			if (strncmp(ret->key, key, strlen(key)) == 0) {
+				break;
+			}
+		}
+		if (!ret->next && strncmp(ret->key, key, strlen(key)) != 0){
+			return 0;
+		}
+	}
+	//gettimeofday(&timer2, NULL);
+	//printf("DEBUG: index searching took %d microseconds\n", (
+                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+                //TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+
+	return ret->version;	
+
 
 }
 
@@ -137,7 +183,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 
 	//update metadata
 	ret->val_len = len;
-	ret->crc = crc_data((uint8_t *)val, len);
+	ret->crc = new_crc_data((uint8_t *)val, len);
 	
 	gettimeofday(&timer1, NULL);
 	printf("DEBUG: index entry CRC took %d microseconds\n", (
@@ -244,21 +290,22 @@ void delete_key(char *key){
 	indx[ind] = NULL; //safety
 
 }
+
 void dummy_cb(void *unused){}
 
-//TODO: actually need to make this read asynchronously..
+/*
+ * Callback function for the initialization process.	
+ * TODO: actually need to make this read asynchronously..
+ */
 void init_cb(void *arg){
 	struct index_ent *ent = malloc(sizeof(struct index_ent));
-	//memset(ent, METAMAGIC, 2);
-	//memcpy(ent, arg, META_SZ);
 
 	//printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
 	uint16_t *tmp = (uint16_t *)arg;
-	//assert(ent->magic == METAMAGIC);
 	if (*tmp  == METAMAGIC){
 		memcpy(ent, arg, META_SZ);
 		ent->next = NULL;
-		printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
+		//printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
 		assert(ent->val_len > 0);
 	
 		uint64_t blks = calc_numblks(ent->val_len);
@@ -279,7 +326,7 @@ void init_cb(void *arg){
 				tocheck_crc = crc_data((arg + META_SZ), ent->val_len);
 			}
 
-			assert(ent->crc == tocheck_crc);
+			assert(ent->crc == tocheck_crc); //TODO: remove assert, do check instead
 			update_index(ent);
 			alloc_block(ent->lba, blks);
 
@@ -289,9 +336,9 @@ void init_cb(void *arg){
 		blks_read += blks; //even if we didn't keep the value, count it as read 
 		printf("DEBUG: Read %lu, blocks so far is %d\n", blks, blks_read);
 	
-	} else { //not sure how to handle the case w/ garbage data or smthg..
+	} else { //if garbage data found just skip to next block..
 		free(ent);
-		blks_read++; //skip to next block..
+		blks_read++;
 		printf("DEBUG:Skipped, blocks so far is %d\n", blks_read);
 	}
 	//print_index();
@@ -310,13 +357,12 @@ void index_init(){
 
 	blks_read = 0; //this is both the number of blks scanned so far and the current LBA..
 	
-	printf("DEBUG: attempting to read from device..\n"); 
+	//printf("DEBUG: attempting to read from device..\n"); 
 	char *buf = malloc(LBA_SIZE);
 	
 	//#TIMER STUFF
-	struct timeval *timer = malloc(sizeof(struct timeval));
-	if (gettimeofday(timer, NULL)){
-		fprintf(stderr, "Timer issue. \n");
+	if (gettimeofday(&timer1, NULL)){
+		fprintf(stderr, "Timer issue.\n");
 		exit(1);
 	}
 	//#
@@ -331,18 +377,14 @@ void index_init(){
 	free(buf);
 
 	//#END TIMER STUFF
-	time_t old_secs = timer->tv_sec;
-	suseconds_t old_usecs = timer->tv_usec;
-
-	if (gettimeofday(timer, NULL)){
+	if (gettimeofday(&timer2, NULL)){
 		fprintf(stderr, "Timer issue.\n");
 		exit(1);
 	}	
-
-	timer->tv_sec = timer->tv_sec - old_secs;
-	timer->tv_usec = timer->tv_usec - old_usecs;
+	printf("DEBUG: index building took %ld:%ld\n", 
+		timer2.tv_sec - timer1.tv_sec, timer2.tv_usec - timer1.tv_usec);
 	//#
-	printf("DEBUG: index building took %ld: %ld\n", timer->tv_sec, timer->tv_usec);
+	
 	print_index();
 	print_freelist();	
 }

@@ -66,9 +66,8 @@ static void start_timer(char *key){
 	char *ptr;
 	long ind = strtol(key, &ptr, 10) - 1;
 	//printf("DEBUG: timer index is %s (str) %ld (int) \n", key, ind);
-	//int ind = (atoi(key) * (curr_iter/batchsize)) - 1;
+	
 	struct timeval *timer = timers[ind];
-	//printf("DEBUG: timer entry at %p\n", timer);
 	if (gettimeofday(timer, NULL)){
 		fprintf(stderr, "Timer issue. \n");
 		exit(1);
@@ -95,52 +94,6 @@ static void end_timer(char * key){
 }
 
 
-/*
-static void start_timer(int ind){
-	struct timeval *timer = timers[ind];
-	if (gettimeofday(timer, NULL)){
-		fprintf(stderr, "Timer issue. \n");
-		exit(1);
-	}
-}
-
-static void end_timer(int ind){
-
-	struct timeval *timer = timers[ind];
-	time_t old_secs = timer->tv_sec;
-	suseconds_t old_usecs = timer->tv_usec;
-
-	if (gettimeofday(timer, NULL)){
-		fprintf(stderr, "Timer issue.\n");
-		exit(1);
-	}
-
-	timer->tv_sec = timer->tv_sec - old_secs;
-	timer->tv_usec = timer->tv_usec - old_usecs;
-	
-	printf("DEBUG: finishing timer for key %s with times %ld:%ld\n", key, timer->tv_sec, timer->tv_usec);
-}
-*/
-
-/*
-static void flush_timers(){
-	FILE *res;
-
-	//TODO uniquely identify results file on every run..
-	if ((res = fopen("results.ix", "w")) == NULL){
-		fprintf(stderr, "Unable to open file %s\n", fname);
-		exit(1);
-	}
-
-	for (int i = 0; i < max_iter; i++){ //TODO double check format..
-		//struct timeval *timer = (timers + (i * sizeof(struct timeval)));
-		fprintf(res, "%d,%ld:%ld\n", i+1, timer->tv_sec, timer->tv_usec);
-	}	 
-
-	fclose(res);
-
-}
-*/
 /* Generates dummy data according to size 
  * super dumb version for now...improve later.
  */
