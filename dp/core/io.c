@@ -143,6 +143,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
 	iobuf->numblks = iobuf->numblks + calc_numblks(len);
+	printf("DEBUG: function - %u ; macro - %u\n", calc_numblks(len), CALC_NUMBLKS(len));
 
 	iobuf->buf[currind*SG_MULT].base = newdata;
 	iobuf->buf[currind*SG_MULT].len = META_SZ;

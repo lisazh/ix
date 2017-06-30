@@ -23,6 +23,7 @@
 
 //random
 #define TIMETOMICROS(ts, tu) ((1000000 * ts) + tu)
+#define CALC_NUMBLKS(b) ((b > DATA_SZ) ? (1 + (((b - DATA_SZ) + LBA_SIZE - 1) / LBA_SIZE)) : 1)
 
 
 typedef int32_t lba_t; //typedef'd in case we change the size...used to be 64bit but truncated for now..

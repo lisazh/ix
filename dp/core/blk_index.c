@@ -106,6 +106,39 @@ uint32_t new_crc_data(const void* data, size_t length)
 }
 
 
+struct index_ent *key_lookup(const char *key){
+
+	gettimeofday(&timer1, NULL);
+	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
+	struct index_ent *ret = indx[hashval];
+
+	if (ret == NULL){ //no key found 
+		//printf("No entry found..\n");
+		return ret;
+
+	} else if (strncmp(ret->key, key, strlen(key)) != 0) { //check chain
+		printf("DEBUG: traversing hash chain for key %s\n", ret->key);
+		while (ret->next){
+			printf("DEBUG: looking at next entry in chain..\n"); 
+			ret = ret->next;
+			printf("DEBUG: current key is %s\n", ret->key);
+			if (strncmp(ret->key, key, strlen(key)) == 0) {
+				break;
+			}
+		}
+		if (!ret->next && strncmp(ret->key, key, strlen(key)) != 0){
+			return NULL;
+		}
+	}
+
+	gettimeofday(&timer2, NULL);
+	printf("DEBUG: key lookup took %d microseconds\n", (
+                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+
+	return ret;	
+}
+
 /*
  * Given key, return LBA mapping
  * returns NULL if key is not in the index..
@@ -113,6 +146,8 @@ uint32_t new_crc_data(const void* data, size_t length)
  */
 struct index_ent *get_index_ent(const char *key){
 
+	return key_lookup(key);
+/*
 	gettimeofday(&timer1, NULL);
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	gettimeofday(&timer2, NULL);
@@ -149,12 +184,12 @@ struct index_ent *get_index_ent(const char *key){
                 //TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	return ret;		
+*/
 }
 
 uint16_t get_version(const char *key){
-	struct index_ent *ent = get_index_ent(key);		
+	struct index_ent *ent = key_lookup(key);		
 	//uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
-
 	if (ent == NULL)
 		return 0;
 	else 
@@ -174,9 +209,7 @@ uint16_t get_version2(const char *key){
 	} else if (strncmp(ret->key, key, strlen(key)) != 0) { //check chain
 		//printf("DEBUG: traversing hash chain for key %s\n", ret->key);
 		while (ret->next){
-			//printf("DEBUG: looking at next entry in chain..\n"); 
 			ret = ret->next;
-			//printf("DEBUG: current key is %s\n", ret->key);
 			if (strncmp(ret->key, key, strlen(key)) == 0) {
 				break;
 			}
@@ -214,31 +247,30 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 	ret->magic = METAMAGIC;	
 	memset(ret->key, '\0', MAX_KEY_LEN);
 	strncpy(ret->key, key, strlen(key));
-	//printf("DEBUG: key and entry key is %s and %s\n", key, ret->key);
 	
 	gettimeofday(&timer2, NULL);
-	//printf("DEBUG: index entry setup (malloc & copy) took %d microseconds\n", (
-                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
-                //TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	printf("DEBUG: index entry setup (malloc & copy) took %d microseconds\n", (
+                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+               	TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	//update metadata
 	ret->val_len = len;
-	//ret->crc = new_crc_data((uint8_t *)val, len);
+	ret->crc = new_crc_data(val, len);
 	ret->crc = 0;		
 
 	gettimeofday(&timer1, NULL);
-	//printf("DEBUG: index entry CRC took %d microseconds\n", (
-               // TIMETOMICROS(timer1.tv_sec, timer1.tv_usec) -
-               // TIMETOMICROS(timer2.tv_sec, timer2.tv_usec)));
+	printf("DEBUG: index entry CRC took %d microseconds\n", (
+                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec) -
+                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec)));
 
-	ret->version = get_version2(key) + 1;
+	ret->version = get_version(key) + 1;
 	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	ret->next = NULL;
 
 	gettimeofday(&timer2, NULL);
-	//printf("DEBUG: index entry creation (rest) took %d microseconds\n", (
-		//TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
-		//TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	printf("DEBUG: index entry creation (rest) took %d microseconds\n", (
+		TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
+		TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	return ret;
 }
@@ -255,6 +287,7 @@ void update_index(struct index_ent *meta){
 
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *oldent = indx[hashval];
+	
 	if (oldent != NULL){
 		//printf("DEBUG: examining existing index for update..\n");
 		if (strncmp(oldent->key, key, strlen(key)) != 0){ //walk chain..
@@ -279,6 +312,7 @@ void update_index(struct index_ent *meta){
 		free_blk(oldent->lba, calc_numblks(oldent->val_len));
 		//printf("DEBUG: freeing LBA %d for %lu blocks\n", oldent->lba, calc_numblks(oldent->val_len));
 		//print_freelist();
+
 		meta->next = oldent->next;
 		free(oldent);
 

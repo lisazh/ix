@@ -605,6 +605,7 @@ void ixev_wait(void)
 	karr->len = 0;
 
 	ix_handle_events();
+	
 }
 
 
