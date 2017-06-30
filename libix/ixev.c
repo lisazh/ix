@@ -34,10 +34,14 @@
 #include "buf.h"
 #include "ixev_timer.h"
 
+#include <sys/time.h>
+
 #define CMD_BATCH_SIZE	4096
 
 /* FIXME: implement automatic TCP Buffer Tuning, Jeffrey Semke et. al. */
 #define IXEV_SEND_WIN_SIZE	65536
+
+static struct timeval timer; //TEMP FOR DEBUGGING
 
 static __thread uint64_t ixev_generation;
 static struct ixev_conn_ops ixev_global_ops;
@@ -208,7 +212,7 @@ static void ixev_io_read(char *key, void *data, size_t len)
 
 static void ixev_io_wrote_done(char *key, void *val)
 {
-	printf("ixev_io_wrote_done: key=%s\n", key);
+	//printf("ixev_io_wrote_done: key=%s\n", key);
 
 	ixev_global_io_ops.put_handler(key, val);
 }
@@ -596,7 +600,12 @@ void ixev_wait(void)
 	 * just make system calls directly.
 	 */
 
+	//gettimeofday(&timer, NULL);
+	//printf("DEBUG: entering ix poll at %ld:%ld\n", timer.tv_sec, timer.tv_usec);
+
 	ix_poll();
+	//gettimeofday(&timer, NULL);
+	//printf("DEBUG: exited ix poll at %ld:%ld\n", timer.tv_sec, timer.tv_usec);
 	ixev_generation++;
 
 	/* WARNING: return handlers should not enqueue new comamnds */
@@ -605,7 +614,10 @@ void ixev_wait(void)
 	karr->len = 0;
 
 	ix_handle_events();
-	
+
+	//gettimeofday(&timer, NULL);
+	//printf("DEBUG: finished event handling at %ld:%ld\n", timer.tv_sec, timer.tv_usec);
+
 }
 
 
@@ -701,7 +713,7 @@ void ixev_put(char *key, void *val, size_t len){
 
 	karr_desc = __bsys_arr_next(karr);
 	ksys_io_write(karr_desc, key, val, len); //LTODO: fix params
-	printf("DEBUG: put called\n");
+	//printf("DEBUG: put called\n");
 }
 
 void ixev_delete(char *key){

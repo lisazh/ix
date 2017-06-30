@@ -65,3 +65,11 @@ DEF_KSTATS(bsys_io_read);
 DEF_KSTATS(bsys_io_write);
 
 DEF_KSTATS(posix_syscall);
+
+DEF_KSTATS(dev_write);
+DEF_KSTATS(dev_read);
+DEF_KSTATS(indx_add);
+DEF_KSTATS(indx_upd);
+DEF_KSTATS(indx_alloc);
+DEF_KSTATS(indx_crc);
+DEF_KSTATS(indx_key);

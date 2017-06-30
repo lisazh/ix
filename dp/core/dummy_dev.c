@@ -18,7 +18,7 @@ static DEFINE_PERCPU(struct mempool, timer_mempool);
 static DEFINE_PERCPU(char *, dummy_dev);
 
 #define MAX_PENDING_TIMERS 2048
-#define WRITE_DELAY 10
+#define WRITE_DELAY 100
 #define READ_DELAY 10
 
 struct io_timer {
@@ -128,7 +128,7 @@ int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 		assert(bytes_written <= lba_count * LBA_SIZE);
 	}
 
-/*
+
 	iot = mempool_alloc(&percpu_get(timer_mempool));
 	assert(iot);
 	iot->cb = cb;
@@ -137,10 +137,10 @@ int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 	timer_init_entry(&iot->t, generic_io_handler);
 	timer_add(&iot->t, NULL, WRITE_DELAY);
 	
-	printf("DEBUG: added callback to timer..\n");
-*/
-	printf("DEBUG: calling callback..\n");
-	cb(arg);
+	//printf("DEBUG: added callback to timer..\n");
+
+	//printf("DEBUG: calling callback..\n");
+	//cb(arg);
 
 	return 0;
 }

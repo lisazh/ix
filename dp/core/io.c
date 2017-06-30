@@ -131,8 +131,10 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	//printf("DEBUG: batching write to key %s at %p with length %ld\n", key, val, len);
 
 	struct ibuf *iobuf = &percpu_get(batch_buf);
+	KSTATS_PUSH(indx_add, NULL);
 	struct index_ent *newdata = new_index_ent(key, val, len);
-	
+	KSTATS_POP(NULL);	
+
 	assert(newdata->magic == METAMAGIC);
 	
 	//printf("DEBUG: new metadata entry at %p with key %s at %p\n", (void *)newdata, newdata->key, (void *) newdata->key);
@@ -143,7 +145,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
 	iobuf->numblks = iobuf->numblks + calc_numblks(len);
-	printf("DEBUG: function - %u ; macro - %u\n", calc_numblks(len), CALC_NUMBLKS(len));
+	//printf("DEBUG: function - %u ; macro - %u\n", calc_numblks(len), CALC_NUMBLKS(len));
 
 	iobuf->buf[currind*SG_MULT].base = newdata;
 	iobuf->buf[currind*SG_MULT].len = META_SZ;
@@ -193,7 +195,9 @@ ssize_t bsys_io_write_flush()
 		return 0;
 	}
 	//debugprint_sg();
+	KSTATS_PUSH(indx_alloc, NULL);
 	int startlba = get_blk(iobuf->numblks); //allocate entire batch in the index
+	KSTATS_POP(NULL);
 	//uint64_t ret = iobuf->numblks;
 	
 	//update lba values..
@@ -209,14 +213,15 @@ ssize_t bsys_io_write_flush()
 		}
 	}
 
-	gettimeofday(&timer, NULL);
-	printf("DEBUG: about to issue \"device\" write at %ld microseconds\n", timer.tv_usec);
+	//gettimeofday(&timer, NULL);
+	//printf("DEBUG: about to issue \"device\" write at %ld microseconds\n", timer.tv_usec);
 
+	KSTATS_PUSH(dev_write, NULL);
 	dummy_dev_writev(iobuf->buf, (iobuf->currind)*SG_MULT, startlba,
 			iobuf->numblks, io_write_cb, NULL);
-	
-	gettimeofday(&timer, NULL);
-	printf("DEBUG: issued write at %ld microseconds\n", timer.tv_usec);
+	KSTATS_POP(NULL);
+	//gettimeofday(&timer, NULL);
+	//printf("DEBUG: issued write at %ld microseconds\n", timer.tv_usec);
 
 	//printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", iobuf->currind, startlba, iobuf->numblks);
 
@@ -241,8 +246,8 @@ ssize_t bsys_io_read_done(void *addr)
  */
 void io_write_cb(void *unused){
 	
-	gettimeofday(&timer, NULL);
-	printf("DEBUG: reached write callback at %ld microseconds\n", timer.tv_usec);
+	//gettimeofday(&timer, NULL);
+	//printf("DEBUG: reached write callback at %ld microseconds\n", timer.tv_usec);
 
 	struct ibuf *iobuf = &percpu_get(batch_buf);
 	//TODO: check status/error codes on completion..? or just assume always returns ok
@@ -254,7 +259,9 @@ void io_write_cb(void *unused){
 
 	//struct index_ent *meta = insert_key(key);
 	for (int i = 0; i < ind; i++){
+		KSTATS_PUSH(indx_upd, NULL);
 		update_index(iobuf->currbatch[i]);
+		KSTATS_POP(NULL);
 		void *uaddr = iobuf->buf[i*SG_MULT + 1].base;
 		usys_io_wrote(iobuf->usrkeys[i], uaddr);
 

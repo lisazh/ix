@@ -86,7 +86,7 @@ void mark_used_blk(struct freelist_ent *ent, lbasz_t num_blks){
 */ 
 lba_t get_blk(lbasz_t num_blks){
 	//printf("DEBUG: trying to find space for %lu blocks\n", num_blks);
-	print_freelist();
+	//print_freelist();
 	struct freelist_ent *iter = freelist;
 	//printf("DEBUG: entering loop\n");
 	while (iter){

@@ -8,7 +8,7 @@
 #include <ix/dummy_dev.h>
 #include <ix/compiler.h>
 
-#define MAX_ENTRIES 1024 //dummy for now, eventually will need to decide how big we want index to be..
+#define MAX_ENTRIES 4096 //dummy for now, eventually will need to decide how big we want index to be..
  						// NOTE also what is this number in relation to # of (per-core) LBAs?
 
 //#define LBA_SIZE 512 //this is defined in dummy_dev.h

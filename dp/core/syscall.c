@@ -136,7 +136,7 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
  */
 static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
-	log_info("Entering bpoll at %lu\n", rdtsc());
+	//log_info("Entering bpoll at %lu\n", rdtsc());
 	int ret, empty;
 
 	usys_reset();
@@ -178,13 +178,13 @@ again:
 	cpu_do_bookkeeping();
 	KSTATS_POP(NULL);
 
-	log_info("Timer stuff at %lu\n", rdtsc());
+	//log_info("Timer stuff at %lu\n", rdtsc());
 
 	KSTATS_PUSH(timer, NULL);
 	timer_run();
 	unset_current_fg();
 	KSTATS_POP(NULL);
-	log_info("End timer stuff at %lu\n", rdtsc());
+	//log_info("End timer stuff at %lu\n", rdtsc());
 	
 	KSTATS_PUSH(rx_poll, NULL);
 	eth_process_poll();
@@ -198,8 +198,8 @@ again:
 	eth_process_send();
 	KSTATS_POP(NULL);
 
-	log_info("Check conditions to go to top at %lu\n", rdtsc());
-	log_info("NR is %d, usys array length is %d\n", nr, percpu_get(usys_arr)->len);
+	//log_info("Check conditions to go to top at %lu\n", rdtsc());
+	//log_info("NR is %d, usys array length is %d\n", nr, percpu_get(usys_arr)->len);
 	if (!nr && !percpu_get(usys_arr)->len) {
 		/* Do not idle if control plane sets the no_idle flag. */
 		if (empty && !percpu_get(cp_cmd)->no_idle) {
@@ -221,7 +221,7 @@ again:
 
 		goto again;
 	}
-	log_info("exiting bpoll at %lu\n", rdtsc());
+	//log_info("exiting bpoll at %lu\n", rdtsc());
 	return 0;
 }
 

@@ -10,6 +10,7 @@
 #include <ix/city.h>
 #include <ix/blk.h>
 #include <ix/mbuf.h>
+#include <ix/kstats.h>
 
 //for profiling index construction
 #include <sys/time.h>
@@ -108,7 +109,7 @@ uint32_t new_crc_data(const void* data, size_t length)
 
 struct index_ent *key_lookup(const char *key){
 
-	gettimeofday(&timer1, NULL);
+	//gettimeofday(&timer1, NULL);
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *ret = indx[hashval];
 
@@ -117,11 +118,11 @@ struct index_ent *key_lookup(const char *key){
 		return ret;
 
 	} else if (strncmp(ret->key, key, strlen(key)) != 0) { //check chain
-		printf("DEBUG: traversing hash chain for key %s\n", ret->key);
+		//printf("DEBUG: traversing hash chain for key %s\n", ret->key);
 		while (ret->next){
-			printf("DEBUG: looking at next entry in chain..\n"); 
+			//printf("DEBUG: looking at next entry in chain..\n"); 
 			ret = ret->next;
-			printf("DEBUG: current key is %s\n", ret->key);
+			//printf("DEBUG: current key is %s\n", ret->key);
 			if (strncmp(ret->key, key, strlen(key)) == 0) {
 				break;
 			}
@@ -131,10 +132,10 @@ struct index_ent *key_lookup(const char *key){
 		}
 	}
 
-	gettimeofday(&timer2, NULL);
-	printf("DEBUG: key lookup took %d microseconds\n", (
-                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
-                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	//gettimeofday(&timer2, NULL);
+	//printf("DEBUG: key lookup took %d microseconds\n", (
+                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+                //TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	return ret;	
 }
@@ -188,7 +189,9 @@ struct index_ent *get_index_ent(const char *key){
 }
 
 uint16_t get_version(const char *key){
-	struct index_ent *ent = key_lookup(key);		
+	KSTATS_PUSH(indx_key, NULL);
+	struct index_ent *ent = key_lookup(key);
+	KSTATS_POP(NULL);		
 	//uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	if (ent == NULL)
 		return 0;
@@ -248,29 +251,33 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 	memset(ret->key, '\0', MAX_KEY_LEN);
 	strncpy(ret->key, key, strlen(key));
 	
-	gettimeofday(&timer2, NULL);
-	printf("DEBUG: index entry setup (malloc & copy) took %d microseconds\n", (
-                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
-               	TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	//gettimeofday(&timer2, NULL);
+	//printf("DEBUG: index entry setup (malloc & copy) took %d microseconds\n", (
+                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+               	//TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	//update metadata
 	ret->val_len = len;
-	ret->crc = new_crc_data(val, len);
+	KSTATS_PUSH(indx_crc, NULL);
+	ret->crc = new_crc_data1(val, len);
+	KSTATS_POP(NULL);
 	ret->crc = 0;		
 
-	gettimeofday(&timer1, NULL);
-	printf("DEBUG: index entry CRC took %d microseconds\n", (
-                TIMETOMICROS(timer1.tv_sec, timer1.tv_usec) -
-                TIMETOMICROS(timer2.tv_sec, timer2.tv_usec)));
+	//gettimeofday(&timer2, NULL);
+	//printf("DEBUG: index entry CRC took %d microseconds\n", (
+                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
+                //TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
+	//ret->val_len = len;
+	//ret->crc = 0;
 	ret->version = get_version(key) + 1;
 	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	ret->next = NULL;
 
 	gettimeofday(&timer2, NULL);
-	printf("DEBUG: index entry creation (rest) took %d microseconds\n", (
-		TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
-		TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
+	//printf("DEBUG: index entry creation (rest) took %d microseconds\n", (
+		//TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
+		//TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	return ret;
 }
@@ -281,7 +288,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
  */
 void update_index(struct index_ent *meta){
 
-	gettimeofday(&timer1, NULL);
+//	gettimeofday(&timer1, NULL);
 
 	char *key = meta->key;
 
@@ -321,7 +328,7 @@ void update_index(struct index_ent *meta){
 		indx[hashval] = meta;
 	}
 
-	gettimeofday(&timer2, NULL);
+	//gettimeofday(&timer2, NULL);
 	//printf("DEBUG: index update took %d microseconds\n", (
 		//TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
 		//TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
