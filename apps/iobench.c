@@ -11,6 +11,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include <ixev.h>
 
@@ -177,7 +178,7 @@ void batch_put(){
 	generate_data(batchsize * io_size, iobuf);
 
 	for (int i=0; i < batchsize; i++){
-		//printf("DEBUG: putting from  %p\n", (void *)(iobuf + (i * io_size)));
+		printf("DEBUG: putting %s from  %p\n", (iobuf + (i * io_size)), (void *)(iobuf + (i * io_size)));
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
 		start_timer(keys[i]);	
 		curr_iter++;
@@ -262,6 +263,7 @@ void cleanup(){
 // callback for ixev_put in READ_ONLY workloads
 static void ro_get_handler(char *key, void *data, size_t datalen){
 	//TODO: print result...or output to file..
+	printf("DEBUG: read key %s with data %s and len %lu\n", key, (char *)data, datalen);
 	resp_iter++;
 	end_timer(key);
 	ixev_get_done(data);
@@ -295,7 +297,8 @@ static void wo_put_handler(char *key, void *val){
 	} else if (resp_iter >= max_iter){
 		//printf("DEBUG: end reached on callback for key %s\n", key);
 		cleanup();
-		exit(0);
+		pthread_exit(0);
+		//exit(0);
 	}
 
 	if ((resp_iter % batchsize) == 0){

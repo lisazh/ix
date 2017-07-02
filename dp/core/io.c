@@ -110,7 +110,7 @@ ssize_t bsys_io_read(char *key){
 	pr = mempool_alloc(&percpu_get(pending_req_mempool));
 	pr->key = key;
 	pr->len = ent->val_len;
-	pr->ents[0].base = mbuf_to_iomap(read_mbuf, mbuf_mtod(read_mbuf, void *));
+	pr->ents[0].base = mbuf_to_iomap(read_mbuf, mbuf_mtod_off(read_mbuf, void *, META_SZ));
 
 	gettimeofday(&timer, NULL);
 	printf("DEBUG: about to issue \"device\" read at %ld microseconds\n", timer.tv_usec);
@@ -119,9 +119,6 @@ ssize_t bsys_io_read(char *key){
 
 	gettimeofday(&timer, NULL);
 	printf("DEBUG: finished issuing device call at %ld microseconds\n", timer.tv_usec);
-
-
-
 
 	return 0;
 }
@@ -145,7 +142,7 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
 	iobuf->numblks = iobuf->numblks + calc_numblks(len);
-	//printf("DEBUG: function - %u ; macro - %u\n", calc_numblks(len), CALC_NUMBLKS(len));
+	printf("DEBUG: function - %u ; macro - %u\n", calc_numblks(len), CALC_NUMBLKS(len));
 
 	iobuf->buf[currind*SG_MULT].base = newdata;
 	iobuf->buf[currind*SG_MULT].len = META_SZ;

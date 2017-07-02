@@ -16,7 +16,7 @@
 
 #include <ixev.h>
 
-#define MAX_DATA 108
+#define MAX_DATA 128
 
 // dummy functions for ixev_conn_ops 
 static struct ixev_ctx *io_dummyaccept(struct ip_tuple *id)
@@ -38,10 +38,10 @@ struct ixev_conn_ops conn_ops = {
 
 char key1[] = "testkey1";
 char key2[] = "testkeya";
-char val1[] = "datadatadata";
-char *val2;
-static int len = 12;
-static int len2 = 108;
+//char val1[] = "datadatadata";
+//char *val2;
+static int len;
+//static int len2 = 108;
 static char *val;
 static int numruns;
 static int run = 0;
@@ -81,26 +81,26 @@ static void get_handler(char *key, void *data, size_t datalen){
 
 static void put_handler(char *key, void *val){
 
-/*
+
 	if (len < MAX_DATA){
 		ixev_get(key);
 	} else if (strncmp(key, "testkeya", 8) == 0){
 		printf("DEBUG: finished writing, exiting..\n");
 		free(val);
 	}
-
+/*
 	if (run < maxruns){
 		ixev_put(key1, val2, len2);
 		run++;
 	} else {
-		//free(val);
-		gettimeofday(&timer2, NULL);
-		printf("DEBUG: finished in %ld seconds, %ld microseconds\n",(timer2.tv_sec - timer1.tv_sec), (timer2.tv_usec - timer1.tv_usec));
+		free(val);
+		//gettimeofday(&timer2, NULL);
+		//printf("DEBUG: finished in %ld seconds, %ld microseconds\n",(timer2.tv_sec - timer1.tv_sec), (timer2.tv_usec - timer1.tv_usec));
 	
 	}
 */
 	//printf("DEBUG: put handler\n");
-	ixev_put(key1, val2, len2);
+	//ixev_put(key1, val2, len2);
 }
 
 //dummy for now..
@@ -132,19 +132,20 @@ int main(int argc, char *argv[]){
 		exit(ret);
 	}
 
-	val2 = malloc(MAX_DATA);
-	for (int i = 0; i < 9; i++){
-		strncpy((val2 + i*12), val1, 12);
-	}
-	printf("DEBUG: data to insert is %s\n", val2);
+	val = malloc(MAX_DATA);
+	//for (int i = 0; i < 9; i++){
+	//	strncpy((val2 + i*12), val1, 12);
+	//}
+	//printf("DEBUG: data to insert is %s\n", val2);
 
-	//len = 0;
+	len = 0;
 	
-	//len += append_data(val, "data data data", len);
+	len += append_data(val, "data data data", len);
 
-	gettimeofday(&timer1, NULL);
+	//gettimeofday(&timer1, NULL);
 	// since these are dummy calls, for now don't need callbacks/handlers
-	ixev_put(key1, val2, len2);
+	//ixev_put(key1, val2, len2);
+	ixev_put(key1, val, len);
 	//ixev_get(key1);
 
 	//TODO: test delete...?

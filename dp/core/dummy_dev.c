@@ -124,7 +124,7 @@ int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 		memcpy(&percpu_get(dummy_dev)[lba * LBA_SIZE + bytes_written],
 				ents[i].base, ents[i].len);
 		bytes_written += ents[i].len;
-	//	printf("DEBUG: bytes written so far is %d\n", bytes_written);
+		//printf("DEBUG: bytes written so far is %d\n", bytes_written);
 		assert(bytes_written <= lba_count * LBA_SIZE);
 	}
 
@@ -137,7 +137,7 @@ int dummy_dev_writev(struct sg_entry *ents, unsigned int nents, uint64_t lba,
 	timer_init_entry(&iot->t, generic_io_handler);
 	timer_add(&iot->t, NULL, WRITE_DELAY);
 	
-	//printf("DEBUG: added callback to timer..\n");
+	printf("DEBUG: added callback to timer..\n");
 
 	//printf("DEBUG: calling callback..\n");
 	//cb(arg);
