@@ -21,7 +21,7 @@
 #define CRC_TOPBIT (1 << (CRC_WIDTH - 1)) 
 
 
-static const uint32_t Crc32Lookup[256] =
+static const uint32_t OldCrc32Lookup[256] =
 {
   // note: the first number of every second row corresponds to the half-byte look-up table !
     0x00000000,0x77073096,0xEE0E612C,0x990951BA,0x076DC419,0x706AF48F,0xE963A535,0x9E6495A3,
@@ -59,18 +59,20 @@ static const uint32_t Crc32Lookup[256] =
 	
 };
 
+static uint32_t Crc32Lookup[8][256];
+
 //#define SCAN_BATCH (MBUF_DATA_LEN/LBA_SIZE)
 
 int blks_read; //used later in index_init
-struct timeval timer1;
-struct timeval timer2;
+//struct timeval timer1;
+//struct timeval timer2;
 
 // wrapper function, in case we decide to change the hash...
 uint64_t hashkey(const char *key, size_t keylen){
 	return CityHash64(key, keylen);
 }
 
-
+/*
 uint16_t crc_data(uint8_t msg[], size_t len){
  	uint16_t crc = 0;
  	for (int i = 0; i < len; i++){
@@ -102,14 +104,65 @@ uint32_t new_crc_data(const void* data, size_t length)
   uint32_t crc = ~0;
   unsigned char* current = (unsigned char*) data;
   while (length--)
-    crc = (crc >> 8) ^ (int)Crc32Lookup[(crc & 0xFF) ^ *current++];
+    crc = (crc >> 8) ^ (int)OldCrc32Lookup[(crc & 0xFF) ^ *current++];
   return ~crc;
 }
+*/
 
+void init_crc(){
+
+	for (unsigned int i = 0; i <= 0xFF; i++)
+	{
+		uint32_t crc = i;
+		for (unsigned int j = 0; j < 8; j++)
+			crc = (crc >> 1) ^ ((crc & 1) * Polynomial);
+		Crc32Lookup[0][i] = crc;
+	}
+
+	for (unsigned int i = 0; i <= 0xFF; i++)
+	{
+		// for Slicing-by-4 and Slicing-by-8
+		Crc32Lookup[1][i] = (Crc32Lookup[0][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[0][i] & 0xFF];
+		Crc32Lookup[2][i] = (Crc32Lookup[1][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[1][i] & 0xFF];
+		Crc32Lookup[3][i] = (Crc32Lookup[2][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[2][i] & 0xFF];
+		// only Slicing-by-8
+		Crc32Lookup[4][i] = (Crc32Lookup[3][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[3][i] & 0xFF];
+		Crc32Lookup[5][i] = (Crc32Lookup[4][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[4][i] & 0xFF];
+		Crc32Lookup[6][i] = (Crc32Lookup[5][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[5][i] & 0xFF];
+		Crc32Lookup[7][i] = (Crc32Lookup[6][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[6][i] & 0xFF];
+	}
+
+}
+
+uint32_t newer_crc(const void* data, size_t length){
+
+	uint32_t* current = (uint32_t*) data;
+	uint32_t crc = ~0;
+	// process eight bytes at once
+	while (length >= 8)
+	{
+		uint32_t one = *current++ ^ crc;
+		uint32_t two = *current++;
+		crc = Crc32Lookup[7][ one      & 0xFF] ^
+		Crc32Lookup[6][(one>> 8) & 0xFF] ^
+		Crc32Lookup[5][(one>>16) & 0xFF] ^
+		Crc32Lookup[4][ one>>24        ] ^
+		Crc32Lookup[3][ two      & 0xFF] ^
+		Crc32Lookup[2][(two>> 8) & 0xFF] ^
+		Crc32Lookup[1][(two>>16) & 0xFF] ^
+		Crc32Lookup[0][ two>>24        ];
+		length -= 8;
+	}
+	unsigned char* currentChar = (unsigned char*) current;
+	// remaining 1 to 7 bytes
+	while (length--)
+		crc = (crc >> 8) ^ crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];
+	
+	return ~crc;
+}
 
 struct index_ent *key_lookup(const char *key){
 
-	//gettimeofday(&timer1, NULL);
 	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
 	struct index_ent *ret = indx[hashval];
 
@@ -131,12 +184,6 @@ struct index_ent *key_lookup(const char *key){
 			return NULL;
 		}
 	}
-
-	//gettimeofday(&timer2, NULL);
-	//printf("DEBUG: key lookup took %d microseconds\n", (
-                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
-                //TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
-
 	return ret;	
 }
 
@@ -191,44 +238,19 @@ struct index_ent *get_index_ent(const char *key){
 uint16_t get_version(const char *key){
 	KSTATS_PUSH(indx_key, NULL);
 	struct index_ent *ent = key_lookup(key);
-	KSTATS_POP(NULL);		
-	//uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;
+	KSTATS_POP(NULL);	
+
 	if (ent == NULL)
 		return 0;
 	else 
 		return ent->version;
-
-}
-
-uint16_t get_version2(const char *key){
-
-	uint64_t hashval = hashkey(key, strlen(key)) % MAX_ENTRIES;	
-	struct index_ent *ret = indx[hashval];
-
-	if (ret == NULL){ //no key found 
-		//printf("No entry found..\n");
-		return 0;
-
-	} else if (strncmp(ret->key, key, strlen(key)) != 0) { //check chain
-		//printf("DEBUG: traversing hash chain for key %s\n", ret->key);
-		while (ret->next){
-			ret = ret->next;
-			if (strncmp(ret->key, key, strlen(key)) == 0) {
-				break;
-			}
-		}
-		if (!ret->next && strncmp(ret->key, key, strlen(key)) != 0){
-			return 0;
-		}
-	}
-	return ret->version;
 }
 
 /* 
  * helper function for determining how many blocks the data should occupy
  * assumes data_len is never zero..
- * TODO: MOVE TO MACRO 	
  */
+ /*
 lbasz_t calc_numblks(uint64_t data_len){
 	//uint64_t ret = (data_len + DATA_SZ - 1) / DATA_SZ; //short way;
 	lbasz_t ret = 1; //minimum one block 
@@ -237,6 +259,7 @@ lbasz_t calc_numblks(uint64_t data_len){
 	//printf("DEBUG: calc numblks returning %u for data of length %lu\n", ret, data_len);
 	return ret;
 }
+*/
 
 /*  Helper function to get a new index structure
  * with metadata populated..
@@ -244,37 +267,25 @@ lbasz_t calc_numblks(uint64_t data_len){
  */
 struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t len){
 	
-	gettimeofday(&timer1, NULL);
+	//gettimeofday(&timer1, NULL);
 
 	struct index_ent *ret = malloc(sizeof(struct index_ent));
 	ret->magic = METAMAGIC;	
 	memset(ret->key, '\0', MAX_KEY_LEN);
 	strncpy(ret->key, key, strlen(key));
-	
-	//gettimeofday(&timer2, NULL);
-	//printf("DEBUG: index entry setup (malloc & copy) took %d microseconds\n", (
-                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
-               	//TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
 
 	//update metadata
 	ret->val_len = len;
 	KSTATS_PUSH(indx_crc, NULL);
-	ret->crc = new_crc_data1(val, len);
+	ret->crc = newer_crc(val, len);
 	KSTATS_POP(NULL);
-	ret->crc = 0;		
+	//ret->crc = 0;		
 
-	//gettimeofday(&timer2, NULL);
-	//printf("DEBUG: index entry CRC took %d microseconds\n", (
-                //TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) -
-                //TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
-
-	//ret->val_len = len;
-	//ret->crc = 0;
 	ret->version = get_version(key) + 1;
 	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	ret->next = NULL;
 
-	gettimeofday(&timer2, NULL);
+	//gettimeofday(&timer2, NULL);
 	//printf("DEBUG: index entry creation (rest) took %d microseconds\n", (
 		//TIMETOMICROS(timer2.tv_sec, timer2.tv_usec) - 
 		//TIMETOMICROS(timer1.tv_sec, timer1.tv_usec)));
@@ -316,7 +327,7 @@ void update_index(struct index_ent *meta){
 			indx[hashval] = meta;
 		}
 		// clean up oldent
-		free_blk(oldent->lba, calc_numblks(oldent->val_len));
+		free_blk(oldent->lba, CALC_NUMBLKS(oldent->val_len));
 		//printf("DEBUG: freeing LBA %d for %lu blocks\n", oldent->lba, calc_numblks(oldent->val_len));
 		//print_freelist();
 
@@ -367,7 +378,7 @@ void delete_key(char *key){
 		prev->next = oldent->next; //remove from chain
 	}
 
-	free_blk(oldent->lba, calc_numblks(oldent->val_len));
+	free_blk(oldent->lba, CALC_NUMBLKS(oldent->val_len));
 	free(oldent);
 	indx[ind] = NULL; //safety
 
@@ -390,32 +401,36 @@ void init_cb(void *arg){
 		//printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
 		assert(ent->val_len > 0);
 	
-		uint64_t blks = calc_numblks(ent->val_len);
+		lbasz_t blks = CALC_NUMBLKS(ent->val_len);
 		struct index_ent *old = get_index_ent(ent->key);
 		
-		if ((old && old->version < ent->version)|| old == NULL){
-			uint16_t tocheck_crc;
+		if ((old && old->version < ent->version) || old == NULL){
+			uint32_t tocheck_crc;
 
 			if (ent->val_len > DATA_SZ){
 
 				char *buf = malloc(LBA_SIZE * blks);
 				dummy_dev_read(buf, blks_read, blks, dummy_cb, NULL);
-				tocheck_crc = new_crc_data((buf + META_SZ), ent->val_len);
+				tocheck_crc = newer_crc((buf + META_SZ), ent->val_len);
 		
 				free(buf);
 
 			} else {
-				tocheck_crc = new_crc_data((arg + META_SZ), ent->val_len);
+				tocheck_crc = newer_crc((arg + META_SZ), ent->val_len);
 			}
 
-			//assert(ent->crc == tocheck_crc); //TODO: remove assert, do check instead
-			update_index(ent);
-			alloc_block(ent->lba, blks);
+			if (ent->crc != tocheck_crc){
+				fprintf(stderr, "CRC does not match for key %s, skipping.\n", ent->key);
+			} else {
+				update_index(ent);
+				alloc_block(ent->lba, blks);
+			}
 
 		} else {
 			free(ent);
 		}
-		blks_read += blks; //even if we didn't keep the value, count it as read 
+		blks_read += blks;
+
 		//printf("DEBUG: Read %lu, blocks so far is %d\n", blks, blks_read);
 	
 	} else { //if garbage data found just skip to next block..
@@ -432,6 +447,8 @@ void init_cb(void *arg){
  * TODO: scan (per cpu partition?) of storage structure and populate indexes
  */
 void index_init(){
+
+	init_crc();
 
 	for (int i = 0; i < MAX_ENTRIES; i++){
 		indx[i] = NULL; 

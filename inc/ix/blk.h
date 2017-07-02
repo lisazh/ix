@@ -52,7 +52,7 @@ void print_freelist(); //for debugging..
 
 /* index management */
 void index_init();
-lbasz_t calc_numblks(uint64_t data_len);
+//lbasz_t calc_numblks(uint64_t data_len);
 struct index_ent *get_index_ent(const char *key);
 struct index_ent *new_index_ent(const char *key, const void *val, uint64_t len);
 void update_index(struct index_ent *meta);
