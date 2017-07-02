@@ -97,10 +97,13 @@ static void end_timer(char * key){
 
 /* Generates dummy data according to size 
  * super dumb version for now...improve later.
+ * ONLY CALL ONCE
  */
-void generate_data(size_t datasize, char *buf){
+void generate_data(size_t datasize){
+	iobuf = malloc(datasize + 1);
+
 	//printf("DEBUG: iobuf starting at %p\n", buf);
-	//srand(time(0));
+	srand(time(0));
 	//int datum; 
 	//while (datasize){
 		//datum = rand();
@@ -109,10 +112,11 @@ void generate_data(size_t datasize, char *buf){
 		//datasize -= sizeof(datum);
 		//buf += sizeof(datum);
 	//}
+
 	for (int i = 0; i < datasize; i++){
-		buf[i] = 'a';		
+		iobuf[i] = (char) ((rand() % 26) + 97);	//cast as ascii char from int val..	
 	}
-	buf[datasize] = '\0';
+	iobuf[datasize] = '\0';
 	//printf("DEBUG: data generated is %s at %p\n", buf, buf);
 }
 
@@ -175,7 +179,7 @@ void free_keys(){
  * in order to get a large number of concurrent in-flight requests
  */
 void batch_put(){
-	generate_data(batchsize * io_size, iobuf);
+	generate_data(batchsize * io_size);
 
 	for (int i=0; i < batchsize; i++){
 		printf("DEBUG: putting %s from  %p\n", (iobuf + (i * io_size)), (void *)(iobuf + (i * io_size)));
@@ -297,13 +301,13 @@ static void wo_put_handler(char *key, void *val){
 	} else if (resp_iter >= max_iter){
 		//printf("DEBUG: end reached on callback for key %s\n", key);
 		cleanup();
-		pthread_exit(0);
-		//exit(0);
+		//pthread_exit(0);
+		exit(0);
 	}
 
-	if ((resp_iter % batchsize) == 0){
-		generate_data(batchsize * io_size, iobuf);
-	}
+	//if ((resp_iter % batchsize) == 0){
+		//generate_data(batchsize * io_size, iobuf);
+	//}
 	//printf("DEBUG: reached end of key %s callback no issue\n", key);
 
 }
@@ -312,9 +316,9 @@ static void rw_get_handler(char *key, void *data, size_t datalen){
 
 	ixev_get_done(data);
 	if (curr_iter < max_iter){
-
-
-
+		int i = curr_iter++;
+		ixev_put(keys[i], NULL, io_size); //TODO FIX TO NOT BE NULL..
+		start_timer(keys[i]);
 	} else {
 		cleanup();
 		exit(0);
@@ -326,9 +330,9 @@ static void rw_get_handler(char *key, void *data, size_t datalen){
 static void rw_put_handler(char *key, void *val){
 
 	if (curr_iter < max_iter){
-
-
-
+		int i = curr_iter++;
+		ixev_get(keys[i]);
+		start_timer(keys[i]);
 	} else {
 		cleanup();
 		exit(0);
@@ -356,9 +360,8 @@ void start_workload(){
 	if (iotype == READ_ONLY){
 		batch_get();
 	} else if (iotype == WRITE_ONLY || iotype == READ_WRITE){
-		iobuf = malloc(batchsize * io_size);
 		batch_put();
-		generate_data(batchsize*io_size, iobuf);
+		//generate_data(batchsize*io_size, iobuf);
 	}
 
 	while(1)
