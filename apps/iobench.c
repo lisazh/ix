@@ -31,8 +31,10 @@ struct ixev_io_ops io_ops;
 char *iobuf;
 char **keys;
 struct timeval **timers;
-struct timeval glob_timer;
+struct timeval glob_timer1;
+struct timeval glob_timer2;
 //struct timeval newtimer;
+struct ixev_ctx ctx;
 
 uint64_t curr_iter = 0;
 uint64_t resp_iter = 0; //
@@ -62,15 +64,11 @@ struct ixev_conn_ops conn_ops = {
 
 
 static void start_timer(char *key){
-	printf("DEBUG: timer key is %s with index at %p\n", key, (void *)(key));
+	//printf("DEBUG: timer key is %s with index at %p\n", key, (void *)(key));
 	//int ind = atoi(key) - 1;
 	char *ptr;
-	long ind;
-	if (strncmp(key, "4240", 4) == 0)
-		ind = 4239;
-	else
-		ind = strtol(key, &ptr, 10) - 1;
-	printf("DEBUG: timer index is %s (str) %ld (int) \n", key, ind);
+	long ind = strtol(key, &ptr, 10) - 1;
+	//printf("DEBUG: timer index is %s (str) %ld (int) \n", key, ind);
 	struct timeval *timer = timers[ind];
 	if (gettimeofday(timer, NULL)){
 		fprintf(stderr, "Timer issue. \n");
@@ -184,14 +182,14 @@ void free_keys(){
 void batch_put(){
 	generate_data(batchsize * io_size);
 	for (int i=0; i < batchsize; i++){
-		//printf("DEBUG: putting %s from  %p\n", (iobuf + (i * io_size)), (void *)(iobuf + (i * io_size)));
+		//printf("DEBUG: putting key %s from %p, data from %p, iosize is %d\n", keys[i], keys[i], (void *)(iobuf + (i * io_size)), io_size);
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
-		printf("DEBUG: put issued for key %s\n", keys[i]);
-		//start_timer(keys[i]);	
+		//printf("DEBUG: put issued for key %s\n", keys[i]);
+		start_timer(keys[i]);	
 		//printf("DEBUG: timer started for key %s\n", keys[i]);
 		curr_iter++;
 	}
-	printf("DEBUG: finished batch\n");
+	//printf("DEBUG: finished batch\n");
 }
 
 
@@ -215,17 +213,17 @@ void init_timers(){
 }
 
 void flushandfree_timers(){
-
+/*
 	time_t gsecs = glob_timer.tv_sec;
 	suseconds_t gusecs = glob_timer.tv_usec;
-
-	if (gettimeofday(&glob_timer, NULL)){
+*/
+	if (gettimeofday(&glob_timer2, NULL)){
 		fprintf(stderr, "Timer issue.\n");
 		exit(1);
 	}	
 
 	//struct timeval *timer = &(timers[atoi(key)]);
-	int time_elapsed = ((glob_timer.tv_sec*1000000) + glob_timer.tv_usec ) - ((gsecs * 1000000) + gusecs);
+	int e2etime = ((glob_timer2.tv_sec*1000000) + glob_timer2.tv_usec ) - ((glob_timer1.tv_sec * 1000000) + glob_timer1.tv_usec);
 	//glob_timer.tv_sec = glob_timer.tv_sec - gsecs;
 	//glob_timer.tv_usec = glob_timer.tv_usec - gusecs;
 	
@@ -244,7 +242,7 @@ void flushandfree_timers(){
 	}
 	
 	//fprintf(res, "Overall time: %ld:%ld\n", glob_timer.tv_sec, glob_timer.tv_usec);
-	fprintf(res, "Overall time: %d microseconds\n", time_elapsed);	
+	fprintf(res, "Overall time: %d microseconds\n", e2etime);	
 	
 	
 	for (int i = 0; i < max_iter; i++){
@@ -266,6 +264,7 @@ void cleanup(){
 		free(iobuf);
 
 	printf("DEBUG: clean up complete\n");
+	ixev_close(&ctx);
 }
 
 
@@ -296,17 +295,21 @@ static void wo_put_handler(char *key, void *val){
 	//gettimeofday(&newtimer, NULL); //whatever
         //printf("DEBUG: reaching timer at %ld: %ld \n", newtimer.tv_sec, newtimer.tv_usec);
 	resp_iter++;
-	//end_timer(key);
+	end_timer(key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++; 
 		//printf("DEBUG: issuing put for index %d, curr_iter is %d\n", i, curr_iter);
 		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
 		//printf("DEBUG: about to start timer for key %s..\n", keys[i]);
-		//start_timer(keys[i]);
+		start_timer(keys[i]);
 	} else if (resp_iter >= max_iter){
+		
 		//printf("DEBUG: end reached on callback for key %s\n", key);
+		if (gettimeofday(&glob_timer2, NULL)){
+			fprintf(stderr, "Timer issue\n");
+			exit(1);
+		}
 		cleanup();
-		//pthread_exit(0);
 		exit(0);
 	}
 
@@ -355,7 +358,7 @@ void start_workload(){
 
 	init_timers();
 
-	if (gettimeofday(&glob_timer, NULL)){ //start global timer..
+	if (gettimeofday(&glob_timer1, NULL)){ //start global timer..
 		fprintf(stderr, "Timer issue.\n");
 		exit(1);
 	}	
@@ -404,12 +407,12 @@ int main(int argc, char *argv[]){
 	}
 
 	int ret;
-	struct ixev_ctx *ctx;
-	ctx = malloc(sizeof(struct ixev_ctx));
+	//struct ixev_ctx *ctx;
+	//ctx = malloc(sizeof(struct ixev_ctx));
 
 	ixev_init(&conn_ops);
 	ixev_init_io(&io_ops);
-	ixev_ctx_init(ctx); //is this always necessary..? 
+	ixev_ctx_init(&ctx); //is this always necessary..? 
 
 	ret = ixev_init_thread();
 	if (ret) {
@@ -419,6 +422,6 @@ int main(int argc, char *argv[]){
 
 	start_workload();
 
-	free(ctx);
+	//free(ctx);
 
 }

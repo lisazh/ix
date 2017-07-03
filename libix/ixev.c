@@ -36,7 +36,9 @@
 
 #include <sys/time.h>
 
-#define CMD_BATCH_SIZE	4096
+//#define CMD_BATCH_SIZE	4096
+#define CMD_BATCH_SIZE 10000
+
 
 /* FIXME: implement automatic TCP Buffer Tuning, Jeffrey Semke et. al. */
 #define IXEV_SEND_WIN_SIZE	65536

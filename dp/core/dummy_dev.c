@@ -103,6 +103,7 @@ int dummy_dev_read(void *payload, uint64_t lba, uint64_t lba_count, io_cb_t cb,
 	struct io_timer *iot;
 	memcpy(payload, &percpu_get(dummy_dev)[lba * LBA_SIZE], lba_count * LBA_SIZE);
 
+	/*
 	iot = mempool_alloc(&percpu_get(timer_mempool));
 	assert(iot);
 	iot->cb = cb;
@@ -110,7 +111,8 @@ int dummy_dev_read(void *payload, uint64_t lba, uint64_t lba_count, io_cb_t cb,
 	
 	timer_init_entry(&iot->t, generic_io_handler);
 	timer_add(&iot->t, NULL, READ_DELAY);
-
+*/
+	cb(arg);
 	return 0;
 }
 	

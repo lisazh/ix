@@ -21,21 +21,21 @@
 
 
 //#define NVME_AWUNPF 2048 //LTODO: will need to get this from "device" config or whatever
-#define DEVBLK_SIZE 1000000 // reasonable approximation of an erase block..
+//#define DEVBLK_SIZE 1000000 // reasonable approximation of an erase block..
 //#define MAX_BATCH (DEVBLK_SIZE/LBA_SIZE) //LTODO move LBA_SIZE def from somewhere else 
-#define MAX_BATCH 1024 //FOR TESTING FIX LATER
+#define MAX_BATCH 100000 //FOR TESTING FIX LATER
 #define SG_MULT 3 //number of sg entries needed per write (LTODO change to 3 eventually)
 // LTODO: for each write need 3 entries: meta, data, zeros ()
 
 #define READ_BATCH 8 // number of buffers per read - 2KB per buffer
-#define MAX_PENDING_REQ 1024
+#define MAX_PENDING_REQ 100000
 
 void io_read_cb(void *arg);
 void io_write_cb(void *unused);
 
 struct ibuf{
 	struct sg_entry buf[MAX_BATCH*SG_MULT]; 
-	uint32_t numblks;
+	lbasz_t numblks;
 	struct index_ent *currbatch[MAX_BATCH];
 	char *usrkeys[MAX_BATCH];
 	int32_t currind;
@@ -141,7 +141,10 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
-	iobuf->numblks = iobuf->numblks + CALC_NUMBLKS(len);
+	int blks = CALC_NUMBLKS(len);
+	//printf("DEBUG: adding %d blocks\n", blks);
+	iobuf->numblks = iobuf->numblks + blks;
+	//printf("DEBUG: number of blocks in batch is now %d\n", iobuf->numblks);
 	//printf("DEBUG: function - %u ; macro - %u\n", calc_numblks(len), CALC_NUMBLKS(len));
 
 	iobuf->buf[currind*SG_MULT].base = newdata;
@@ -221,7 +224,8 @@ ssize_t bsys_io_write_flush()
 	//printf("DEBUG: issued write at %ld microseconds\n", timer.tv_usec);
 
 	//printf("DEBUG: Wrote %d entries starting at %d for %d blocks\n", iobuf->currind, startlba, iobuf->numblks);
-
+	
+	//reset variables...
 	return 0;
 }
 
