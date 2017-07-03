@@ -90,7 +90,7 @@ int blkio_init_cpu(void)
 ssize_t bsys_io_read(char *key){
 
 	gettimeofday(&timer, NULL);
-	printf("DEBUG: entering read syscall handler at %ld microseconds\n", timer.tv_usec);
+	//printf("DEBUG: entering read syscall handler at %ld microseconds\n", timer.tv_usec);
 
 	struct pending_req *pr;
 	struct index_ent *ent = get_index_ent(key);
@@ -99,7 +99,7 @@ ssize_t bsys_io_read(char *key){
 
 	//printf("DEBUG: about to read lba %ld for %lu blocks\n", ent->lba, ent->lba_count);
 	
-	uint64_t numblks = calc_numblks(ent->val_len);
+	uint64_t numblks = CALC_NUMBLKS(ent->val_len);
 
 	// Allocate buffer for read
 	assert(numblks <= MBUF_DATA_LEN / LBA_SIZE);
@@ -113,12 +113,12 @@ ssize_t bsys_io_read(char *key){
 	pr->ents[0].base = mbuf_to_iomap(read_mbuf, mbuf_mtod_off(read_mbuf, void *, META_SZ));
 
 	gettimeofday(&timer, NULL);
-	printf("DEBUG: about to issue \"device\" read at %ld microseconds\n", timer.tv_usec);
+	//printf("DEBUG: about to issue \"device\" read at %ld microseconds\n", timer.tv_usec);
 
 	dummy_dev_read(data, ent->lba, numblks, io_read_cb, pr);
 
 	gettimeofday(&timer, NULL);
-	printf("DEBUG: finished issuing device call at %ld microseconds\n", timer.tv_usec);
+	//printf("DEBUG: finished issuing device call at %ld microseconds\n", timer.tv_usec);
 
 	return 0;
 }
@@ -141,8 +141,8 @@ ssize_t bsys_io_write(char *key, void *val, size_t len){
 
 	int currind = iobuf->currind;
 	iobuf->currbatch[currind] = newdata; //keep for later to allocate blocks 
-	iobuf->numblks = iobuf->numblks + calc_numblks(len);
-	printf("DEBUG: function - %u ; macro - %u\n", calc_numblks(len), CALC_NUMBLKS(len));
+	iobuf->numblks = iobuf->numblks + CALC_NUMBLKS(len);
+	//printf("DEBUG: function - %u ; macro - %u\n", calc_numblks(len), CALC_NUMBLKS(len));
 
 	iobuf->buf[currind*SG_MULT].base = newdata;
 	iobuf->buf[currind*SG_MULT].len = META_SZ;
@@ -203,7 +203,7 @@ ssize_t bsys_io_write_flush()
 			if (i == 0){
 				(iobuf->currbatch[i])->lba = startlba;
 			} else {
-				int blks = calc_numblks((iobuf->currbatch[i-1])->val_len);
+				int blks = CALC_NUMBLKS((iobuf->currbatch[i-1])->val_len);
 				(iobuf->currbatch[i])->lba = startlba + blks;
 				startlba += blks;
 			}
@@ -284,7 +284,7 @@ void io_write_cb(void *unused){
 void io_read_cb(void *arg)
 {
 	gettimeofday(&timer, NULL);
-	printf("DEBUG: reached read callback at %ld microseconds\n", timer.tv_usec);
+	//printf("DEBUG: reached read callback at %ld microseconds\n", timer.tv_usec);
 
 	struct pending_req *rq = (struct pending_req *)arg;
 

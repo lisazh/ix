@@ -34,8 +34,8 @@ struct timeval **timers;
 struct timeval glob_timer;
 //struct timeval newtimer;
 
-int curr_iter = 0;
-int resp_iter = 0; //
+uint64_t curr_iter = 0;
+uint64_t resp_iter = 0; //
 
 //input params -- default values for all
 uint8_t iotype;
@@ -62,12 +62,15 @@ struct ixev_conn_ops conn_ops = {
 
 
 static void start_timer(char *key){
-	//printf("DEBUG: timer key index at %p\n", (void *)(key));
+	printf("DEBUG: timer key is %s with index at %p\n", key, (void *)(key));
 	//int ind = atoi(key) - 1;
 	char *ptr;
-	long ind = strtol(key, &ptr, 10) - 1;
-	//printf("DEBUG: timer index is %s (str) %ld (int) \n", key, ind);
-	
+	long ind;
+	if (strncmp(key, "4240", 4) == 0)
+		ind = 4239;
+	else
+		ind = strtol(key, &ptr, 10) - 1;
+	printf("DEBUG: timer index is %s (str) %ld (int) \n", key, ind);
 	struct timeval *timer = timers[ind];
 	if (gettimeofday(timer, NULL)){
 		fprintf(stderr, "Timer issue. \n");
@@ -180,13 +183,15 @@ void free_keys(){
  */
 void batch_put(){
 	generate_data(batchsize * io_size);
-
 	for (int i=0; i < batchsize; i++){
-		printf("DEBUG: putting %s from  %p\n", (iobuf + (i * io_size)), (void *)(iobuf + (i * io_size)));
+		//printf("DEBUG: putting %s from  %p\n", (iobuf + (i * io_size)), (void *)(iobuf + (i * io_size)));
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
-		start_timer(keys[i]);	
+		printf("DEBUG: put issued for key %s\n", keys[i]);
+		//start_timer(keys[i]);	
+		//printf("DEBUG: timer started for key %s\n", keys[i]);
 		curr_iter++;
 	}
+	printf("DEBUG: finished batch\n");
 }
 
 
@@ -240,8 +245,8 @@ void flushandfree_timers(){
 	
 	//fprintf(res, "Overall time: %ld:%ld\n", glob_timer.tv_sec, glob_timer.tv_usec);
 	fprintf(res, "Overall time: %d microseconds\n", time_elapsed);	
-
-
+	
+	
 	for (int i = 0; i < max_iter; i++){
 		fprintf(res, "%d,%ld:%ld\n", i+1, timers[i]->tv_sec, timers[i]->tv_usec);
 		free(timers[i]);
@@ -267,7 +272,7 @@ void cleanup(){
 // callback for ixev_put in READ_ONLY workloads
 static void ro_get_handler(char *key, void *data, size_t datalen){
 	//TODO: print result...or output to file..
-	printf("DEBUG: read key %s with data %s and len %lu\n", key, (char *)data, datalen);
+	//printf("DEBUG: read key %s with data %s and len %lu\n", key, (char *)data, datalen);
 	resp_iter++;
 	end_timer(key);
 	ixev_get_done(data);
@@ -291,13 +296,13 @@ static void wo_put_handler(char *key, void *val){
 	//gettimeofday(&newtimer, NULL); //whatever
         //printf("DEBUG: reaching timer at %ld: %ld \n", newtimer.tv_sec, newtimer.tv_usec);
 	resp_iter++;
-	end_timer(key);
+	//end_timer(key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++; 
 		//printf("DEBUG: issuing put for index %d, curr_iter is %d\n", i, curr_iter);
 		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
 		//printf("DEBUG: about to start timer for key %s..\n", keys[i]);
-		start_timer(keys[i]);
+		//start_timer(keys[i]);
 	} else if (resp_iter >= max_iter){
 		//printf("DEBUG: end reached on callback for key %s\n", key);
 		cleanup();
@@ -354,9 +359,7 @@ void start_workload(){
 		fprintf(stderr, "Timer issue.\n");
 		exit(1);
 	}	
-	//gettimeofday(&newtimer, NULL); //whatever
-	//printf("DEBUG: starting timer at %ld: %ld \n", newtimer.tv_sec, newtimer.tv_usec);
-
+	
 	if (iotype == READ_ONLY){
 		batch_get();
 	} else if (iotype == WRITE_ONLY || iotype == READ_WRITE){

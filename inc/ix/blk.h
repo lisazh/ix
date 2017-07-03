@@ -16,7 +16,7 @@
 
 // ideally want key length + rest of metadata no more than 128 bytes (1/4 of a block)
 #define MAX_KEY_LEN 108
-#define META_SZ ((144/8) + MAX_KEY_LEN) //in bytes LTODO: find less hardcode-y way to determine
+#define META_SZ ((160/8) + MAX_KEY_LEN) //in bytes LTODO: find less hardcode-y way to determine
 #define DATA_SZ (LBA_SIZE - META_SZ)
 
 #define METAMAGIC 0xd006

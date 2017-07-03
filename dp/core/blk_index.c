@@ -20,7 +20,7 @@
 #define CRC_WIDTH 16
 #define CRC_TOPBIT (1 << (CRC_WIDTH - 1)) 
 
-
+const uint32_t Polynomial = 0xEDB88320;
 static const uint32_t OldCrc32Lookup[256] =
 {
   // note: the first number of every second row corresponds to the half-byte look-up table !
@@ -64,8 +64,8 @@ static uint32_t Crc32Lookup[8][256];
 //#define SCAN_BATCH (MBUF_DATA_LEN/LBA_SIZE)
 
 int blks_read; //used later in index_init
-//struct timeval timer1;
-//struct timeval timer2;
+struct timeval timer1;
+struct timeval timer2;
 
 // wrapper function, in case we decide to change the hash...
 uint64_t hashkey(const char *key, size_t keylen){
@@ -100,7 +100,7 @@ uint16_t new_crc_data1(char* msg, size_t len){
 }
 
 uint32_t new_crc_data(const void* data, size_t length)
-{
+{/
   uint32_t crc = ~0;
   unsigned char* current = (unsigned char*) data;
   while (length--)
@@ -156,7 +156,7 @@ uint32_t newer_crc(const void* data, size_t length){
 	unsigned char* currentChar = (unsigned char*) current;
 	// remaining 1 to 7 bytes
 	while (length--)
-		crc = (crc >> 8) ^ crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];
+		crc = (crc >> 8) ^ Crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];
 	
 	return ~crc;
 }
@@ -282,7 +282,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, const uint64_t
 	//ret->crc = 0;		
 
 	ret->version = get_version(key) + 1;
-	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %d and version %d\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
+	//printf("DEBUG: metadata for key %s with magic value %hu, val_len %lu, crc %u and version %u\n", key, ret->magic, ret->val_len, ret->crc, ret->version); 
 	ret->next = NULL;
 
 	//gettimeofday(&timer2, NULL);
@@ -398,13 +398,15 @@ void init_cb(void *arg){
 	if (*tmp  == METAMAGIC){
 		memcpy(ent, arg, META_SZ);
 		ent->next = NULL;
-		//printf("DEBUG: reading entries from device..key is %s, value length is %lu\n", ent->key, ent->val_len);
+		printf("DEBUG: reading entries from device..key is %s, value length is %lu, version is %d\n", ent->key, ent->val_len, ent->version);
 		assert(ent->val_len > 0);
 	
 		lbasz_t blks = CALC_NUMBLKS(ent->val_len);
 		struct index_ent *old = get_index_ent(ent->key);
 		
 		if ((old && old->version < ent->version) || old == NULL){
+			if (old)
+				printf("DEBUG: old version was %d\n", old->version);
 			uint32_t tocheck_crc;
 
 			if (ent->val_len > DATA_SZ){
@@ -456,7 +458,7 @@ void index_init(){
 
 	blks_read = 0; //this is both the number of blks scanned so far and the current LBA..
 	
-	//printf("DEBUG: attempting to read from device..\n"); 
+	printf("DEBUG: attempting to read from device..\n"); 
 	char *buf = malloc(LBA_SIZE);
 	
 	//#TIMER STUFF
