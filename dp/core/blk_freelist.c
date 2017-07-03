@@ -85,7 +85,7 @@ void mark_used_blk(struct freelist_ent *ent, lbasz_t num_blks){
 * also last ent guaranteed to be "rest of space" entry
 */ 
 lba_t get_blk(lbasz_t num_blks){
-	//printf("DEBUG: trying to find space for %lu blocks\n", num_blks);
+	//printf("DEBUG: trying to find space for %u blocks\n", num_blks);
 	//print_freelist();
 	struct freelist_ent *iter = freelist;
 	//printf("DEBUG: entering loop\n");
@@ -96,12 +96,15 @@ lba_t get_blk(lbasz_t num_blks){
 	} 
 	//printf("DEBUG: exited loop\n");
 	
-	if (iter == NULL)
-		printf("DEBUG: reached end without finding space.. \n");
+	if (iter == NULL){
+		fprintf(stderr, "Unable to allocate %u blocks, reached end without findng space..\n", num_blks);
+		return -1;	
+	}
 	//TODO: currently assume will always have storage space..what if run out of blocks 
 	uint64_t ret = iter->start_lba;
 	mark_used_blk(iter, num_blks); //in case iter is modified
-
+	//printf("DEBUG: space found\n");
+	//print_freelist();
 	return ret; //just return lba ?
 }
 
@@ -191,7 +194,7 @@ void print_freelist(){
 	printf("DEBUG: List of free blocks:\n");
 	struct freelist_ent *tmp = freelist;
 	while (tmp){
-		printf("Block # %lu for %lu blocks\n", tmp->start_lba, tmp->lba_count);
+		printf("Block # %d for %u blocks\n", tmp->start_lba, tmp->lba_count);
 		tmp = tmp->next;
 	}
 }

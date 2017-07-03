@@ -12,7 +12,7 @@
  						// NOTE also what is this number in relation to # of (per-core) LBAs?
 
 //#define LBA_SIZE 512 //this is defined in dummy_dev.h
-#define MAX_LBA_NUM (STORAGE_SIZE/LBA_SIZE/32) //TODO: THIS IS TEMPORARY...need to determine real value..
+#define MAX_LBA_NUM (STORAGE_SIZE/LBA_SIZE) //TODO: Make this a per-core value...
 
 // ideally want key length + rest of metadata no more than 128 bytes (1/4 of a block)
 #define MAX_KEY_LEN 108
@@ -58,7 +58,7 @@ struct index_ent *new_index_ent(const char *key, const void *val, uint64_t len);
 void update_index(struct index_ent *meta);
 //uint16_t get_version(const char *key);
 //struct index_ent *insert_key(char *key, ssize_t val_len);
-
+void print_index();
 void delete_key(char *key); //unused for now...
 
 
