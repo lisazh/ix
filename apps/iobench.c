@@ -84,7 +84,7 @@ static void start_timer(char *key){
 }
 
 static void end_timer(char *key){
-	char *ptr
+	char *ptr;
 	int ind = strtol(key, &ptr, 10) - 1;
 
 	struct timeval *timer = timers[ind];
@@ -104,8 +104,8 @@ static void end_timer(char *key){
 	*/
 
 	// store only the time elapsed for this key's request.
+	timer->tv_usec = TIMETOMICROS(timer->tv_sec, timer->tv_usec) - TIMETOMICROS(old_secs, old_usecs);
 	timer->tv_sec = 0;
-	timer->tv_usec = TIMETOMICRO(timer->tv_sec, timer->tv_usec) - TIMETOMICRO(old_secs, old_usecs);
 	
 	//printf("DEBUG: finishing timer for key %s with times %ld:%ld\n", key, timer->tv_sec, timer->tv_usec);
 }
@@ -270,6 +270,7 @@ void cleanup(){
 
 	printf("DEBUG: clean up complete\n");
 	ixev_close(&ctx);
+	//ixev_exit();
 }
 
 
@@ -328,7 +329,7 @@ static void rw_get_handler(char *key, void *data, size_t datalen){
 
 		ixev_put(keys[i], (void *)(iobuf + (rand() % io_size)), io_size); //pick a random offset within random data to write..
 		start_timer(keys[i]);
-	} else (resp_iter >= max_iter){
+	} else if (resp_iter >= max_iter){
 		cleanup();
 		exit(0);
 	}
@@ -344,7 +345,7 @@ static void rw_put_handler(char *key, void *val){
 		int i = curr_iter++;
 		ixev_get(keys[i]);
 		start_timer(keys[i]);
-	} else (resp_iter >= max_iter){
+	} else if (resp_iter >= max_iter){
 		cleanup();
 		exit(0);
 	}

@@ -692,10 +692,14 @@ int ixev_init_io(struct ixev_io_ops *ops)
 
 }
 
+/*
+ * DOESNT WORK..
 void ixev_exit(){
+	printf("DEBUG: reached exit\n");
 	exit(0); //free karr? 
 }
 
+*/
 
 /*
  * NEW: functions for I/O

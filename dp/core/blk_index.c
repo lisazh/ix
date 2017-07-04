@@ -481,12 +481,13 @@ void index_init(){
 	if (gettimeofday(&timer2, NULL)){
 		fprintf(stderr, "Timer issue.\n");
 		exit(1);
-	}	
-	printf("DEBUG: index building took %ld:%ld\n", 
-		timer2.tv_sec - timer1.tv_sec, timer2.tv_usec - timer1.tv_usec);
+	}
+		
+	printf("DEBUG: index building took %ld milliseconds\n", 
+		((timer2.tv_sec*1000000 + timer2.tv_usec) - (timer1.tv_sec*1000000 + timer1.tv_usec)) / 1000);
 	//#
 	
-	print_index();
+	//print_index();
 	print_freelist();	
 }
 
@@ -566,7 +567,7 @@ void init_cb_oneblk(void *arg){
 void print_index(){
 	for (int i = 0; i < MAX_ENTRIES; i++){
 		if (indx[i] && indx[i]->key){
-			printf("Index entry for key %s, with value length %lu, at lba %lu\n", indx[i]->key, indx[i]->val_len, indx[i]->lba);
+			printf("Index entry for key %s, with value length %ld, at lba %d\n", indx[i]->key, indx[i]->val_len, indx[i]->lba);
 		}
 	}
 }
