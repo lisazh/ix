@@ -11,7 +11,8 @@ import time
 
 
 MODES = ['0', '1']
-BENCH_PARAMS = []
+IO_SZS = [100, 500, 1000]
+BT_SZS = []
 RESULT_DIR = ""
 #BASE_DIR = '/home/'
 IX_CMD = 'dp/ix'
@@ -27,7 +28,7 @@ def graph_results():
 
 def benchmark_singles(mode, cwd):
 
-	for arg in BENCH_PARAMS:
+	for arg in IO_SZS:
 		proc = subprocess.Popen(
 			['sudo', cwd + IX_CMD, '--', cwd + BENCH_CMD, mode, '1', arg], \
 			stdout=PIPE)
@@ -39,7 +40,9 @@ def benchmark_singles(mode, cwd):
 		#kill 	
 
 def benchmark_batches(mode, cwd):
-	pass
+	
+	for arg in BT_SZS:
+		
 
 def run_benchmark(m):
 	cwd = os.getcwd()
