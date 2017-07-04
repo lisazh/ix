@@ -16,6 +16,7 @@
 /apps/ioapp
 /apps/iobench
 tags
+results*
 
 .DS_Store
 */.DS_Store

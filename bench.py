@@ -13,7 +13,7 @@ import mmap
 
 MODES = ['0', '1']
 IO_SZS = [100, 500, 1000]
-BT_SZS = []
+BT_SZS = [1, 10, 100, 1000, 10000]
 RESULT_DIR = ""
 #BASE_DIR = '/home/'
 IX_CMD = 'dp/ix'
@@ -31,7 +31,7 @@ def benchmark_singles(mode, cwd):
 
 	for arg in IO_SZS:
 		proc = subprocess.Popen(
-			['sudo', cwd + IX_CMD, '--', cwd + BENCH_CMD, mode, '1', arg], \
+			['sudo', cwd + IX_CMD, '--', cwd + BENCH_CMD, mode, '1', '10', arg], \
 			stdout=PIPE)
 
 		for i in range(WAIT):
@@ -53,21 +53,26 @@ def main():
 		##run_benchmark(m)
 	#os.setpgrp()
 	outfile = open('out.ix', 'w+')
-	mfile = mmap.mmap(outfile.fileno(), 0)
+	#mfile = mmap.mmap(outfile.fileno(), 0)
 	cwd = os.getcwd()
+	
 	proc = subprocess.Popen(
 		['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, '1', '1', '10'], \
 		stdout=outfile)
 
 	#out = proc.communicate()[0]
 	#print out
-
 	time.sleep(WAIT_BASE)
-	for i in range(WAIT_BASE): #TODO: replace with some value based on size of benchmark..
+	mfile = mmap.mmap(outfile.fileno(), 0)
+	
+	for i in range(20): #TODO: replace with some value based on size of benchmark..
 		if mfile.find('clean up complete') == -1:
 			time.sleep(1)
 		else: 
-			print 'benchmark completed\n'
+			#TODO learn how to format strings in python...
+			print 'benchmark completed at' 
+			print i 
+			print '\n'
 			break
 	
 	#kill process anyway..

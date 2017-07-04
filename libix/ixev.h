@@ -139,7 +139,7 @@ extern void ixev_get(char *key);
 extern void ixev_put(char *key, void *val, size_t len);
 extern void ixev_delete(char *key);
 extern void ixev_get_done(void *addr);
-extern void ixev_exit(); //try exiting..
+//extern void ixev_exit(); //try exiting..
 
 /**
  * ixev_dial - open a connection
