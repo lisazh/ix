@@ -22,7 +22,6 @@
 #define METAMAGIC 0xd006
 
 //random
-#define TIMETOMICROS(ts, tu) ((1000000 * ts) + tu)
 #define CALC_NUMBLKS(b) ((b > DATA_SZ) ? (1 + (((b - DATA_SZ) + LBA_SIZE - 1) / LBA_SIZE)) : 1)
 
 

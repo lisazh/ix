@@ -15,7 +15,8 @@
 
 #include <ixev.h>
 
-//#define MAX_KEYS 10
+#define TIMETOMICROS(ts, tu) ((1000000 * ts) + tu)
+
 #define MAX_KEY_LEN 7 //overwrite the internal value for benchmarking..
 #define DEF_IO_SIZE 128
 
@@ -33,7 +34,6 @@ char **keys;
 struct timeval **timers;
 struct timeval glob_timer1;
 struct timeval glob_timer2;
-//struct timeval newtimer;
 struct ixev_ctx ctx;
 
 uint64_t curr_iter = 0;
@@ -74,10 +74,18 @@ static void start_timer(char *key){
 		fprintf(stderr, "Timer issue. \n");
 		exit(1);
 	}
+
+	/*	
+	if (ind == 0){ //first entry
+		glob_timer1.tv_sec = timer->tv_sec;
+		glob_timer1.tv_usec = timer->tv_usec;
+	}
+	*/
 }
 
-static void end_timer(char * key){
-	int ind = atoi(key) - 1;
+static void end_timer(char *key){
+	char *ptr
+	int ind = strtol(key, &ptr, 10) - 1;
 
 	struct timeval *timer = timers[ind];
 	time_t old_secs = timer->tv_sec;
@@ -88,9 +96,16 @@ static void end_timer(char * key){
 		exit(1);
 	}	
 
-	//struct timeval *timer = &(timers[atoi(key)]);
-	timer->tv_sec = timer->tv_sec - old_secs;
-	timer->tv_usec = timer->tv_usec - old_usecs;
+	/*
+	if (ind == max_iter - 1){ // last entry
+		glob_timer2.tv_sec = timer->tv_sec;
+		glob_timer2.tv_usec = timer->tv_usec;
+	}
+	*/
+
+	// store only the time elapsed for this key's request.
+	timer->tv_sec = 0;
+	timer->tv_usec = TIMETOMICRO(timer->tv_sec, timer->tv_usec) - TIMETOMICRO(old_secs, old_usecs);
 	
 	//printf("DEBUG: finishing timer for key %s with times %ld:%ld\n", key, timer->tv_sec, timer->tv_usec);
 }
@@ -184,12 +199,9 @@ void batch_put(){
 	for (int i=0; i < batchsize; i++){
 		//printf("DEBUG: putting key %s from %p, data from %p, iosize is %d\n", keys[i], keys[i], (void *)(iobuf + (i * io_size)), io_size);
 		ixev_put(keys[i], (void *)(iobuf + (i*io_size)), io_size);
-		//printf("DEBUG: put issued for key %s\n", keys[i]);
 		start_timer(keys[i]);	
-		//printf("DEBUG: timer started for key %s\n", keys[i]);
 		curr_iter++;
 	}
-	//printf("DEBUG: finished batch\n");
 }
 
 
@@ -222,15 +234,10 @@ void flushandfree_timers(){
 		exit(1);
 	}	
 
-	//struct timeval *timer = &(timers[atoi(key)]);
 	int e2etime = ((glob_timer2.tv_sec*1000000) + glob_timer2.tv_usec ) - ((glob_timer1.tv_sec * 1000000) + glob_timer1.tv_usec);
-	//glob_timer.tv_sec = glob_timer.tv_sec - gsecs;
-	//glob_timer.tv_usec = glob_timer.tv_usec - gusecs;
-	
 
 	FILE *res;
 
-	//TODO uniquely identify results file on every run..
 	char fname[25];
 	strcpy(fname, "results_");
 	sprintf((fname + 8), "%c_", (iotype == READ_ONLY) ? 'r' : 'w');
@@ -241,12 +248,11 @@ void flushandfree_timers(){
 		exit(1);
 	}
 	
-	//fprintf(res, "Overall time: %ld:%ld\n", glob_timer.tv_sec, glob_timer.tv_usec);
-	fprintf(res, "Overall time: %d microseconds\n", e2etime);	
+	fprintf(res, "##Overall time: %d microseconds\n", e2etime);	
 	
 	
 	for (int i = 0; i < max_iter; i++){
-		fprintf(res, "%d,%ld:%ld\n", i+1, timers[i]->tv_sec, timers[i]->tv_usec);
+		fprintf(res, "%d,%ld\n", i+1, timers[i]->tv_usec);
 		free(timers[i]);
 	}	 
 
@@ -255,8 +261,7 @@ void flushandfree_timers(){
 }
 
 void cleanup(){
-	//flush_timers();
-	//free(timers);
+
 	flushandfree_timers();
 	free_keys();
 
@@ -270,7 +275,7 @@ void cleanup(){
 
 // callback for ixev_put in READ_ONLY workloads
 static void ro_get_handler(char *key, void *data, size_t datalen){
-	//TODO: print result...or output to file..
+	//TODO: print result...or output to file?
 	//printf("DEBUG: read key %s with data %s and len %lu\n", key, (char *)data, datalen);
 	resp_iter++;
 	end_timer(key);
@@ -292,8 +297,6 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 static void wo_put_handler(char *key, void *val){
 	
 	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
-	//gettimeofday(&newtimer, NULL); //whatever
-        //printf("DEBUG: reaching timer at %ld: %ld \n", newtimer.tv_sec, newtimer.tv_usec);
 	resp_iter++;
 	end_timer(key);
 	if (curr_iter < max_iter){
@@ -313,21 +316,19 @@ static void wo_put_handler(char *key, void *val){
 		exit(0);
 	}
 
-	//if ((resp_iter % batchsize) == 0){
-		//generate_data(batchsize * io_size, iobuf);
-	//}
-	//printf("DEBUG: reached end of key %s callback no issue\n", key);
-
 }
 
 static void rw_get_handler(char *key, void *data, size_t datalen){
 
 	ixev_get_done(data);
+	resp_iter++;
+	end_timer(key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++;
-		ixev_put(keys[i], NULL, io_size); //TODO FIX TO NOT BE NULL..
+
+		ixev_put(keys[i], (void *)(iobuf + (rand() % io_size)), io_size); //pick a random offset within random data to write..
 		start_timer(keys[i]);
-	} else {
+	} else (resp_iter >= max_iter){
 		cleanup();
 		exit(0);
 	}
@@ -337,11 +338,13 @@ static void rw_get_handler(char *key, void *data, size_t datalen){
 
 static void rw_put_handler(char *key, void *val){
 
+	resp_iter++;
+	end_timer(key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++;
 		ixev_get(keys[i]);
 		start_timer(keys[i]);
-	} else {
+	} else (resp_iter >= max_iter){
 		cleanup();
 		exit(0);
 	}
@@ -407,8 +410,6 @@ int main(int argc, char *argv[]){
 	}
 
 	int ret;
-	//struct ixev_ctx *ctx;
-	//ctx = malloc(sizeof(struct ixev_ctx));
 
 	ixev_init(&conn_ops);
 	ixev_init_io(&io_ops);
@@ -421,7 +422,5 @@ int main(int argc, char *argv[]){
 	}
 
 	start_workload();
-
-	//free(ctx);
 
 }
