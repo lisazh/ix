@@ -692,6 +692,10 @@ int ixev_init_io(struct ixev_io_ops *ops)
 
 }
 
+void ixev_exit(){
+	exit(0); //free karr? 
+}
+
 
 /*
  * NEW: functions for I/O
