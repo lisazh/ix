@@ -75,12 +75,11 @@ static void start_timer(char *key){
 		exit(1);
 	}
 
-	/*	
 	if (ind == 0){ //first entry
 		glob_timer1.tv_sec = timer->tv_sec;
 		glob_timer1.tv_usec = timer->tv_usec;
 	}
-	*/
+
 }
 
 static void end_timer(char *key){
@@ -96,12 +95,12 @@ static void end_timer(char *key){
 		exit(1);
 	}	
 
-	/*
+	
 	if (ind == max_iter - 1){ // last entry
 		glob_timer2.tv_sec = timer->tv_sec;
 		glob_timer2.tv_usec = timer->tv_usec;
 	}
-	*/
+	
 
 	// store only the time elapsed for this key's request.
 	timer->tv_usec = TIMETOMICROS(timer->tv_sec, timer->tv_usec) - TIMETOMICROS(old_secs, old_usecs);
@@ -228,12 +227,12 @@ void flushandfree_timers(){
 /*
 	time_t gsecs = glob_timer.tv_sec;
 	suseconds_t gusecs = glob_timer.tv_usec;
-*/
+
 	if (gettimeofday(&glob_timer2, NULL)){
 		fprintf(stderr, "Timer issue.\n");
 		exit(1);
 	}	
-
+*/
 	int e2etime = ((glob_timer2.tv_sec*1000000) + glob_timer2.tv_usec ) - ((glob_timer1.tv_sec * 1000000) + glob_timer1.tv_usec);
 
 	FILE *res;
@@ -326,7 +325,6 @@ static void rw_get_handler(char *key, void *data, size_t datalen){
 	end_timer(key);
 	if (curr_iter < max_iter){
 		int i = curr_iter++;
-
 		ixev_put(keys[i], (void *)(iobuf + (rand() % io_size)), io_size); //pick a random offset within random data to write..
 		start_timer(keys[i]);
 	} else if (resp_iter >= max_iter){
@@ -361,12 +359,12 @@ void start_workload(){
 	get_keys();
 
 	init_timers();
-
+/*
 	if (gettimeofday(&glob_timer1, NULL)){ //start global timer..
 		fprintf(stderr, "Timer issue.\n");
 		exit(1);
 	}	
-	
+*/	
 	if (iotype == READ_ONLY){
 		batch_get();
 	} else if (iotype == WRITE_ONLY || iotype == READ_WRITE){

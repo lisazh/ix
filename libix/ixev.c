@@ -713,7 +713,7 @@ void ixev_get(char *key)
 
 	karr_desc = __bsys_arr_next(karr);
 	ksys_io_read(karr_desc, key); //LTODO: fix params
-	printf("DEBUG: get called\n");
+	//printf("DEBUG: get called\n");
 }
 
 

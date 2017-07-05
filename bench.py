@@ -12,16 +12,19 @@ import fnmatch
 #import matlibplot.pyplot as plot
 
 
-MODES = ['0', '1']
+MODES = ['1', '0']
 IO_SZS = [100, 500, 1000]
 BT_SZS = [1, 10, 100, 1000, 10000]
+DEF_ITER = 100
 RESULT_DIR = ""
 #BASE_DIR = '/home/'
 IX_CMD = 'dp/ix'
 BENCH_CMD = 'apps/iobench'
 
-WAIT_BASE = 5 #scientifically determined minimum wait time for IX startup...
 
+WAIT_BASE = 5 #scientifically determined minimum wait time for IX startup...
+1M = 1000000
+TRIES = 3
 """
 """
 def graph_results():
@@ -32,21 +35,19 @@ def benchmark_singles(mode, cwd):
 
 	for arg in IO_SZS:
 		outfile = open('out.ix', 'w+')
-		mfile = mmap.mmap(outfile.fileno(), 0)
+		##mfile = mmap.mmap(outfile.fileno(), 0)
 		proc = subprocess.Popen(
-<<<<<<< HEAD
-			['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, mode, '1', arg], \
+			['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, mode, '1', str(DEF_ITER), str(arg)], \
 			stdout=outfile)
-=======
-			['sudo', cwd + IX_CMD, '--', cwd + BENCH_CMD, mode, '1', '10', arg], \
-			stdout=PIPE)
->>>>>>> d547a428c749ba9aabf048e0993f82f454701a7f
 
+		print "running benchmark for io size of {}".format(arg)
 		time.sleep(WAIT_BASE)
+		mfile = mmap.mmap(outfile.fileno(),0)
+		wait = (arg *100/1M)  if mode == '0' else (arg/1M)
 
-		for i in range(WAIT_BASE * 10): #TODO: replace with some value based on size of benchmark..
+		for i in range(TRIES): #TODO: replace with some value based on size of benchmark..
 			if mfile.find('clean up complete') == -1:
-				time.sleep(1)
+				time.sleep(wait)
 			else: 
 				print 'benchmark completed\n'
 				break
@@ -70,28 +71,33 @@ def benchmark_singles(mode, cwd):
 	##TODO move files somewhere
 
 	resultdir = os.path.join(cwd, 'resultsraw')
-	os.mkdir(resultsdir)
+	if not os.path.exists(resultdir):
+		os.mkdir(resultdir)
 
 	
 	for f in os.listdir('.'):
-    	if fnmatch.fnmatch(f, 'results_*.ix'):
-        	os.rename(os.path.join(cwd, f), os.path.join(resultsdir, f))
+    		if fnmatch.fnmatch(f, 'results_*.ix'):
+        		os.rename(os.path.join(cwd, f), os.path.join(resultdir, f))
 		
 def run_benchmark(m):
 	cwd = os.getcwd()
-	if sys.argv[1] == 's':
+	benchmark_singles(m, cwd)
+		
+"""
+if sys.argv[1] == 's':
 		print "Running singles benchmark\n"
 		benchmark_singles(m, cwd)
-	else if sys.argv[1] == 'b':
+	elif sys.argv[1] == 'b':
 		print "Running batches benchmark\n"
 		benchmark_batches(m, cwd)
 	else:
 		print "No benchmark type specified..exiting.\n"
 
-
+"""
 def main():
 
 	for m in MODES:
+		print "running benchmark in mode {}".format(m)
 		run_benchmark(m)
 
 	"""
