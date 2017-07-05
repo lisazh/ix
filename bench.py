@@ -8,140 +8,121 @@ import subprocess
 import time
 import mmap
 import fnmatch
+import random
+from datetime import datetime
 #import numpy ##TODO find module 
 #import matlibplot.pyplot as plot
 
-
-MODES = ['1', '0']
+#PARAMS
+MODES = [1, 0]  # ordering is to ensure writes go before reads..
 IO_SZS = [100, 500, 1000]
-BT_SZS = [1, 10, 100, 1000, 10000]
-DEF_ITER = 100
-RESULT_DIR = ""
-#BASE_DIR = '/home/'
+BT_SZS = [10, 100, 1000, 10000]
+DEF_IOSZ = 128
+
+#LOGISTICS
+SRESULT_DIR = "resultsbatch"
+BRESULT_DIR = "resultsingle"
 IX_CMD = 'dp/ix'
 BENCH_CMD = 'apps/iobench'
 
-
+#MISC
+TRIES = 5
 WAIT_BASE = 5 #scientifically determined minimum wait time for IX startup...
-1M = 1000000
-TRIES = 3
-"""
-"""
+ONE_M = 1000000
+
+
 def graph_results():
 	pass
 
+def mv_results(whichdir):
 
-def benchmark_singles(mode, cwd):
+	cwd = os.getcwd()
 
-	for arg in IO_SZS:
-		outfile = open('out.ix', 'w+')
-		##mfile = mmap.mmap(outfile.fileno(), 0)
-		proc = subprocess.Popen(
-			['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, mode, '1', str(DEF_ITER), str(arg)], \
-			stdout=outfile)
-
-		print "running benchmark for io size of {}".format(arg)
-		time.sleep(WAIT_BASE)
-		mfile = mmap.mmap(outfile.fileno(),0)
-		wait = (arg *100/1M)  if mode == '0' else (arg/1M)
-
-		for i in range(TRIES): #TODO: replace with some value based on size of benchmark..
-			if mfile.find('clean up complete') == -1:
-				time.sleep(wait)
-			else: 
-				print 'benchmark completed\n'
-				break
+	topdir = os.path.join(cwd, whichdir)
+	if not os.path.exists(topdir):
+		os.mkdir(topdir)
 	
-		p = subprocess.Popen(['sudo', 'killall', 'ix'])
-	
-		time.sleep(1)	
-
-		#TODO grep and do smthg with index building time...
-
-		mfile.close()
-		outfile.close()
-	
-	#check it was killed..
-		p1 = subprocess.Popen(['ps', 'aux'], stdout=subprocess.PIPE)
-		p2 = subprocess.Popen(['grep', 'ix'], stdin=p1.stdout, stdout=subprocess.PIPE)
-		p1.stdout.close()
-		output = p2.communicate()[0]
-		print output
-
-	##TODO move files somewhere
-
-	resultdir = os.path.join(cwd, 'resultsraw')
-	if not os.path.exists(resultdir):
-		os.mkdir(resultdir)
-
-	
+	resultdir = os.path.join(topdir, datetime.now().isoformat('-'))
 	for f in os.listdir('.'):
     		if fnmatch.fnmatch(f, 'results_*.ix'):
-        		os.rename(os.path.join(cwd, f), os.path.join(resultdir, f))
-		
-def run_benchmark(m):
+        		os.rename(os.path.join(cwd, f), os.path.join(resultdir, f))	
+
+
+def runner(mode, batchsz, iternum, iosize):
+
 	cwd = os.getcwd()
-	benchmark_singles(m, cwd)
-		
-"""
-if sys.argv[1] == 's':
-		print "Running singles benchmark\n"
-		benchmark_singles(m, cwd)
-	elif sys.argv[1] == 'b':
-		print "Running batches benchmark\n"
-		benchmark_batches(m, cwd)
-	else:
-		print "No benchmark type specified..exiting.\n"
 
-"""
-def main():
-
-	for m in MODES:
-		print "running benchmark in mode {}".format(m)
-		run_benchmark(m)
-
-	"""
 	outfile = open('out.ix', 'w+')
-	#mfile = mmap.mmap(outfile.fileno(), 0)
-	cwd = os.getcwd()
-	
 	proc = subprocess.Popen(
-		['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, '1', '1', '10'], \
+		['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, str(mode), str(batchsz), str(iternum), str(iosize)], \
 		stdout=outfile)
 
-	#out = proc.communicate()[0]
-	#print out
 	time.sleep(WAIT_BASE)
-	mfile = mmap.mmap(outfile.fileno(), 0)
-	
-	for i in range(20): #TODO: replace with some value based on size of benchmark..
-		if mfile.find('clean up complete') == -1:
-			time.sleep(1)
-		else: 
-			#TODO learn how to format strings in python...
-			print 'benchmark completed at' 
-			print i 
-			print '\n'
-			break
-	
-	#kill process anyway..
-	#print "Process group {} and PID {}".format(os.getpgrp(), proc.pid) 
-	##os.killpg(0, signal.SIGKILL)
-	p = subprocess.Popen(['sudo', 'killall', 'ix'])
-	
-	time.sleep(1)	
 
-	mfile.close() #close mmap first..
+	pid = proc.pid
+	mfile = mmap.mmap(outfile.fileno(),0)
+	if batchsz > 1:
+		wait 
+	else:	
+		wait = (iternum *100/ONE_M)  if mode == '1' else (iternum/ONE_M)	
+
+	for i in range(TRIES):
+		if mfile.find('clean up complete') == -1:
+			time.sleep(wait)
+		else: 
+			print 'benchmark completed\n'
+			break
+
+	p = subprocess.Popen(['sudo', 'killall', 'ix'])
+
+	time.sleep(1)	
+	mfile.close()
 	outfile.close()
-	
-	#check it was killed..
+
+#check it was killed.. TODO BETTER CHECK
+"""
 	p1 = subprocess.Popen(['ps', 'aux'], stdout=subprocess.PIPE)
 	p2 = subprocess.Popen(['grep', 'ix'], stdin=p1.stdout, stdout=subprocess.PIPE)
 	p1.stdout.close()
 	output = p2.communicate()[0]
 	print output
+"""
 
-	"""
+	if os.exists(os.join('/proc', pid)):
+		print "Benchmark process not killed.."
+	else:
+		print "Benchmark process killed successfully."
+
+def benchmark_batches(mode):
+
+	iter = random.randint(1, 10)
+
+	for i in range(iter):
+		for arg in BT_SZS:
+			runner(mode, arg, iter, DEF_IOSZ)
+
+	mv_results(BRESULT_DIR)
+
+
+def benchmark_singles(mode):
+
+	for arg in IO_SZS:
+		runner(mode, 1, iter, arg)
+
+	mv_results(SRESULT_DIR)
+
+		
+def run_benchmarks(m):
+	benchmark_singles(m)
+	benchmark_batches(m)
+
+	#allresdir = os.path.join(cwd, 'resultsall', datetime.now().isoformat('-')) #NVM..
+
+def main():
+
+	for m in MODES:
+		print "running benchmark in mode {}".format(m)
+		run_benchmarks(m)
 
 if __name__=="__main__":
 	main()
