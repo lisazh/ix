@@ -15,11 +15,14 @@ from datetime import datetime
 #import matlibplot.pyplot as plot
 
 #PARAMS
-MODES = [1, 0]  # ordering is to ensure writes go before reads..
+MODES = [0, 1, 2]  # ordering is to ensure writes go before reads..
+STRMODES = ['r', 'w', 'rw']
 IO_SZS = [100, 250, 500, 1000, 2500, 5000]
 BT_SZS = [10, 100, 1000, 10000]
+STOR_SZS = [1000, 10000, 100000]
 DEF_ITER = 100
-DEF_IOSZ = 256
+DEF_IOSZ = 384
+DEF_STORSZ = 512
 
 #LOGISTICS
 SRESULT_DIR = "resultsingle"
@@ -36,7 +39,7 @@ ONE_M = 1000000
 def graph_results():
 	pass
 
-def mv_results(whichdir):
+def mv_results(whichdir, pref=""):
 
 	cwd = os.getcwd()
 
@@ -45,7 +48,7 @@ def mv_results(whichdir):
 		os.mkdir(topdir)
 	
 	if whichdir == BRESULT_DIR:
-		resultdir = os.path.join(topdir, datetime.now().strftime("%d%m%y_%H%M"))
+		resultdir = os.path.join(topdir, pref + datetime.now().strftime("%d%m%y_%H%M"))
 		os.mkdir(resultdir)	
 	else:
 		resultdir = topdir
@@ -55,11 +58,11 @@ def mv_results(whichdir):
         		os.rename(os.path.join(cwd, f), os.path.join(resultdir, f))	
 
 
-def runner(mode, batchsz, itern, iosize):
+def runner(mode, batchsz, itern, iosize, outfname='out.ix'):
 
 	cwd = os.getcwd()
 
-	outfile = open('out.ix', 'w+')
+	outfile = open(outfname, 'w+')
 	proc = subprocess.Popen(
 		['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, str(mode), str(batchsz), str(itern), str(iosize)], \
 		stdout=outfile)
@@ -100,6 +103,16 @@ def runner(mode, batchsz, itern, iosize):
 		print "Benchmark process killed successfully."
 
 
+def benchmark_index():
+
+	#technically should clean out "device" between runs..whatever
+	for s in STOR_SZS:
+		runner(1, 1, s, DEF_STORSZ)
+		runner(0, 1, 1, DEF_IOSZ) #dummy read call
+		#grep out.ix for deets
+		#write to a new file...
+
+
 def benchmark_batches(mode):
 
 	ntimes = random.randint(1, 10)
@@ -108,16 +121,15 @@ def benchmark_batches(mode):
 	for i in range(ntimes):
 		for arg in BT_SZS:
 			runner(mode, arg, 1, DEF_IOSZ)
-
-	mv_results(BRESULT_DIR)
+			mv_results(BRESULT_DIR, STRMODES[mode])
 
 
 def benchmark_singles():
 
 	for arg in IO_SZS:
 		#Run writes and then immediately followed by read (b/c read depends on existing written IO size)
-		runner(MODES[0], 1, DEF_ITER, arg) 
-		runner(MODES[1], 1, DEF_ITER, arg)
+		runner(MODES[1], 1, DEF_ITER, arg) 
+		runner(MODES[0], 1, DEF_ITER, arg)
 
 	mv_results(SRESULT_DIR)
 
@@ -127,15 +139,12 @@ def run_benchmarks(m):
 	#benchmark_singles(m)
 	#benchmark_batches(m)
 
-	#allresdir = os.path.join(cwd, 'resultsall', datetime.now().isoformat('-')) #NVM..
-	#graph_iosizes(SRESULT_DIR, IO_SZS)
-
-
 def main():
 	#benchmark_singles()
-	for m in MODES:
-		print "running batch benchmark in mode {}".format(m)
-		benchmark_batches(m)
+
+	#writes before reads..
+	benchmark_batches(MODES[1]) 
+	benchmark_batches(MODES[0])
 
 if __name__=="__main__":
 	main()

@@ -1,8 +1,9 @@
-
+import re
 import os 
 import fnmatch
 import numpy as np
 import matplotlib.pyplot as plot
+import * from bench
 
 SZDIR='resultsingle'
 
@@ -25,6 +26,26 @@ def getavg(fname):
 
 	return ret
 	
+
+def grepdata(fpath):
+	f = open(fpath, 'r')
+	d = f.readline()
+	f.close()
+	m = re.search('\d+(?= microseconds)', d)
+	print "Time was {}".format(m.group(0))
+	return int(m.group(0))
+
+def getbatchdata(sz):
+
+	arr = []
+	for root, dirs, fs in os.walk(os.path.join(os.getcwd(), BRESULT_DIR)):
+		for d in dirs:
+			for fname in os.listdir(os.path.join(root, d)):
+				if fnmatch.fnmatch(fname, "results*")
+					arr.append(grepdata(os.path.join(root, d, fname)))
+
+	return np.mean(arr)			
+
 
 """
 
@@ -56,13 +77,27 @@ def graph_iosizes(iosizes):
 	perf = vect(iosizes, SZDIR)
 
 	print perf
-
-	plot.plot(iosizes, perf)
+	#TODO different lines.. how label
+	plot.plot(iosizes, perf, label='Writes')
 	plot.xlabel('IO Size (bytes)')
-	plot.ylabel('Latency (us)')
+	plot.ylabel('Average Latency (us)')
 	plot.title('Performance over IO sizes')
 
 	plot.savefig('perf_iosizes.png')
+
+
+def graph_indexrebuild():
+
+
+	stor_sz = []
+	rebuildtime = 
+
+	plot.plot(stor_sz, rebuildtime)
+	plot.xlabel()
+	plot.ylabel()
+	plot.title()
+
+	plot.savefig('.png')
 
 
 def graph_tpoh():
@@ -71,7 +106,6 @@ def graph_tpoh():
 def graph_batch():
 	
 	res_fio= [20, 21, 22, 23]
-
 	res_nodelay= [10, 11, 12, 13]
 	res_delay = (30, 31, 32, 33)
 
