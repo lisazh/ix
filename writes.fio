@@ -5,23 +5,22 @@ direct=0
 ioengine=libaio
 filename=/dev/ramdisk/test
 name=ramdiskwrite
+time_based
+runtime=1
 
 [job1]
 size=5120
 iodepth=10
-output=fio_w10.ix
 
 [job2]
 size=51200
 iodepth=100
-output=fio_w100.ix
 
 [job3]
 size=512000
 iodepth=1000
-output=fio_w1000.ix
 
 [job4]
 size=5120000
 iodepth=10000
-output=fio_w10000.ix
+

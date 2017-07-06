@@ -10,16 +10,16 @@ import mmap
 import fnmatch
 import random
 from datetime import datetime
-from graphing import *
+#from graphing import *
 #import numpy ##TODO find module 
 #import matlibplot.pyplot as plot
 
 #PARAMS
 MODES = [1, 0]  # ordering is to ensure writes go before reads..
-IO_SZS = [100, 500, 1000]
+IO_SZS = [100, 250, 500, 1000, 2500, 5000]
 BT_SZS = [10, 100, 1000, 10000]
 DEF_ITER = 100
-DEF_IOSZ = 128
+DEF_IOSZ = 256
 
 #LOGISTICS
 SRESULT_DIR = "resultsingle"
@@ -103,6 +103,7 @@ def runner(mode, batchsz, itern, iosize):
 def benchmark_batches(mode):
 
 	ntimes = random.randint(1, 10)
+	print "Running benchmark in mode {0} for {1} iterations".format(mode, ntimes)
 
 	for i in range(ntimes):
 		for arg in BT_SZS:
@@ -111,27 +112,30 @@ def benchmark_batches(mode):
 	mv_results(BRESULT_DIR)
 
 
-def benchmark_singles(mode):
+def benchmark_singles():
 
 	for arg in IO_SZS:
-		runner(mode, 1, DEF_ITER, arg)
+		#Run writes and then immediately followed by read (b/c read depends on existing written IO size)
+		runner(MODES[0], 1, DEF_ITER, arg) 
+		runner(MODES[1], 1, DEF_ITER, arg)
 
 	mv_results(SRESULT_DIR)
 
 		
 def run_benchmarks(m):
+	pass
 	#benchmark_singles(m)
 	#benchmark_batches(m)
 
 	#allresdir = os.path.join(cwd, 'resultsall', datetime.now().isoformat('-')) #NVM..
-	graph_iosizes(SRESULT_DIR, IO_SZS)
+	#graph_iosizes(SRESULT_DIR, IO_SZS)
 
 
 def main():
-
+	#benchmark_singles()
 	for m in MODES:
-		print "running benchmark in mode {}".format(m)
-		run_benchmarks(m)
+		print "running batch benchmark in mode {}".format(m)
+		benchmark_batches(m)
 
 if __name__=="__main__":
 	main()

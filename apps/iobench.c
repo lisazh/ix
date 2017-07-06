@@ -296,7 +296,7 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 // callback for ixev_put in WRITE_ONLY workloads
 static void wo_put_handler(char *key, void *val){
 	
-	//printf("DEBUG: callback reached for key %s at %p\n", key, key);
+	printf("DEBUG: put finished for key %s at %p\n", key, key);
 	resp_iter++;
 	end_timer(key);
 	if (curr_iter < max_iter){
