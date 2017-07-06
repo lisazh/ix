@@ -4,7 +4,7 @@ import fnmatch
 import numpy as np
 import matplotlib.pyplot as plot
 
-DIRNAME='resultest'
+SZDIR='resultsingle'
 
 
 def compute_iops(perfus, numreq):
@@ -50,10 +50,10 @@ def getdatal(sz, dirname):
 
 
 
-def graph_iosizes(dirname, iosizes):
+def graph_iosizes(iosizes):
 
 	vect = np.vectorize(getdatal)
-	perf = vect(iosizes, dirname)
+	perf = vect(iosizes, SZDIR)
 
 	print perf
 
@@ -65,6 +65,34 @@ def graph_iosizes(dirname, iosizes):
 	plot.savefig('perf_iosizes.png')
 
 
+def graph_tpoh():
+	pass
+
+def graph_batch():
+	
+	res_fio= [20, 21, 22, 23]
+
+	res_nodelay= [10, 11, 12, 13]
+	res_delay = (30, 31, 32, 33)
+
+	ind = np.arange(1,5)
+	width = 0.25       # the width of the bars
+
+	fig, ax = plot.subplots()
+	rects1 = ax.bar(ind, res_nodelay, width, color='r')
+	rects2 = ax.bar(ind + width, res_fio, width, color='y')
+	rects3 = ax.bar(ind + 2*width, res_delay, width, color='g')
+
+	# add some text for labels, title and axes ticks
+	ax.set_ylabel('IOPS')
+	ax.set_title('IOPS or smthg')
+	ax.set_xticks(ind + width * 3/2)
+	ax.set_xticklabels(('G1', 'G2', 'G3', 'G4'))
+
+	plot.savefig('sampleiops.png')
+
+
+
 if __name__=="__main__":
 
 	"""
@@ -73,6 +101,9 @@ if __name__=="__main__":
 		darr = np.loadtxt(f, delimiter='', usecols = (), ndmin=0)
 	"""
 
+	graph_batch()
+
+	'''
 	iosizes = [100, 500, 1000]
 	#perf = [112, 120, 170]
 	vect = np.vectorize(getdatal)
@@ -87,6 +118,8 @@ if __name__=="__main__":
 
 	#dmin = np.amin(darr)
 	#dmax = np.amax(darr)
+
+	'''
 
 	"""
 	worklds = ('min ', 'avg', 'max')
@@ -104,6 +137,6 @@ if __name__=="__main__":
 	"""
 
 	#plot.show()
-	plot.savefig('sample.png')
+	#plot.savefig('sample.png')
 
 	print "works"
