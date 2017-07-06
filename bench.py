@@ -11,7 +11,7 @@ import fnmatch
 import random
 from datetime import datetime
 #from graphing import *
-#import numpy ##TODO find module 
+import numpy as np ##TODO find module 
 #import matlibplot.pyplot as plot
 
 #PARAMS
@@ -19,7 +19,7 @@ MODES = [0, 1, 2]  # ordering is to ensure writes go before reads..
 STRMODES = ['r', 'w', 'rw']
 IO_SZS = [100, 250, 500, 1000, 2500, 5000]
 BT_SZS = [10, 100, 1000, 10000]
-STOR_SZS = [1000, 5000, 10000, 50000, 100000]
+STOR_SZS = [1000, 2500, 5000, 7500, 10000, 25000, 50000, 75000, 100000]
 DEF_ITER = 1000
 DEF_IOSZ = 384
 DEF_STORSZ = 512
@@ -85,7 +85,7 @@ def runner(mode, batchsz, itern, iosize, killat=0, outfname='out.ix'):
 			if mfile.find("put finished for key {}".format(killat)):
 				break #jump to kill..
 		else: 
-			print 'benchmark completed\n'
+			print 'benchmark completed'
 			break
 
 	p = subprocess.Popen(['sudo', 'killall', 'ix'])
@@ -102,9 +102,12 @@ def runner(mode, batchsz, itern, iosize, killat=0, outfname='out.ix'):
 	#output = p2.communicate()[0]
 	#print output
 
+	for i in range(TRIES):
+		if not os.path.exists(os.path.join('/proc', str(pid))):
+			print "Benchmark process killed successfully"
+		else:
+			time.sleep(0.01)
 	if os.path.exists(os.path.join('/proc', str(pid))):
-		print "Benchmark process not killed.."
-	else:
 		print "Benchmark process killed successfully."
 
 
@@ -113,20 +116,22 @@ def benchmark_index():
 	ret = []
 	rg = re.compile('(?:DEBUG: index building took )\d+(?= milliseconds)')
 
+	ntimes = random.randint(1, 10)
 	#technically should clean out "device" between runs..whatever
 	for s in STOR_SZS:
 		outname = "out_{}.ix".format(s)
-		runner(1, 1, s, DEF_STORSZ)
-		runner(0, 1, 1, DEF_IOSZ, outfname=outname) #dummy read call
+		runner(1, 1, s, DEF_IOSZ)
+		for i in range(ntimes):
+			tmp = []
+			runner(0, 1, 1, DEF_IOSZ, outfname=outname) #dummy read call
 		
 
-		f = open(outname, 'r')
-		for line in f:
-			if rg.match(line):
-				ret.append(int(re.search('\d+(?= milliseconds)', line).group()))
-
-
-	print "Times for index building were {0} for indexes of sizes {1}".format(ret, STOR_SZS)				
+			f = open(outname, 'r')
+			for line in f:
+				if rg.match(line):
+					tmp.append(int(re.search('\d+(?= milliseconds)', line).group()))
+		ret.append(np.mean(tmp))	
+	print "Average times for index building were {0} over {2} runs for indexes of sizes {1}".format(ret, STOR_SZS, ntimes)				
 		#write to a new file...
 
 
@@ -145,7 +150,6 @@ def benchmark_batches(mode):
 
 
 def benchmark_singles():
-
 	for arg in IO_SZS:
 		#Run writes and then immediately followed by read (b/c read depends on existing written IO size)
 		runner(MODES[1], 1, DEF_ITER, arg) 
