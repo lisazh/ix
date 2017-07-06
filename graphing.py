@@ -3,13 +3,14 @@ import os
 import fnmatch
 import numpy as np
 import matplotlib.pyplot as plot
-import * from bench
+from bench import *
 
-SZDIR='resultsingle'
 
+NODELAYDIR = 'resultsbatchnodelay'
 
 def compute_iops(perfus, numreq):
-	return numreq/(perfus/1000000)
+	#print "Params are {0} (num I/Os) {1} (performance)".format(numreq, perfus)
+	return numreq/(perfus/ONE_M)
 
 
 
@@ -26,47 +27,51 @@ def getavg(fname):
 
 	return ret
 	
+def getfiodata(fiores):
+	arr = []
+	rg = re.compile('(?:\s*write\:).*(?<=iops\=)\d+(?=, runt)')
+
+	f = open(os.path.join(os.getcwd(), fiores))
+	for line in f:
+		if rg.match(line):
+			#print "Matched at line {}".format(line)
+			arr.append(int(re.search('(?<=iops\=)\d+', line).group()))
+
+	return arr
 
 def grepdata(fpath):
+	#print "DEBUG path is {}".format(fpath)
 	f = open(fpath, 'r')
 	d = f.readline()
 	f.close()
 	m = re.search('\d+(?= microseconds)', d)
-	print "Time was {}".format(m.group(0))
+	#print "Time was {}".format(m.group(0))
 	return int(m.group(0))
 
-def getbatchdata(sz):
+def getbatchdata(sz, dirname):
 
 	arr = []
-	for root, dirs, fs in os.walk(os.path.join(os.getcwd(), BRESULT_DIR)):
+	for root, dirs, fs in os.walk(os.path.join(os.getcwd(), dirname)):
 		for d in dirs:
 			for fname in os.listdir(os.path.join(root, d)):
-				if fnmatch.fnmatch(fname, "results*")
+				if fnmatch.fnmatch(fname, "results_w_{}_*.ix".format(str(sz))):
 					arr.append(grepdata(os.path.join(root, d, fname)))
 
-	return np.mean(arr)			
+	#print "Times for {0} requests were {1}".format(sz, arr)
+	return compute_iops(np.mean(arr), sz)			
 
 
-"""
 
-def getdata(sz):
-	ret = np.empty(len(sz))
-
-	for i in range(len(sz)):
-		rdir = os.path.join(os.getcwd(), DIRNAME)
-		dirlist = os.listdir(rdir)
-		for fname in dirlist:
-			if fnmatch.fnmatch(fname, "results*{}.ix".format(str(sz[i]))):
-				 ret[i] = getavg(os.path.join(rdir,fname))
-	return ret			 
-
-"""
 
 def getdatal(sz, dirname):
-	fullpath = os.path.join(os.getcwd(), dirname)
+
+	rg = re.compile('results_.*(?<=_){}.ix$'.format(sz))
+	fullpath = os.path.join(os.getcwd(), dirname)	
 	for fname in os.listdir(fullpath):
-			if fnmatch.fnmatch(fname, "results*{}.ix".format(str(sz))):
-				 return getavg(os.path.join(fullpath, fname))
+			if (rg.match(fname)):
+			#if fnmatch.fnmatch(fname, "results_*{}.ix".format(str(sz))):
+				print "Matched file {0} for io size {1}".format(fname, sz)
+				return getavg(os.path.join(fullpath, fname))
 
 
 
@@ -74,15 +79,19 @@ def getdatal(sz, dirname):
 def graph_iosizes(iosizes):
 
 	vect = np.vectorize(getdatal)
-	perf = vect(iosizes, SZDIR)
+	wperf = vect(iosizes, os.path.join(SRESULT_DIR, "writes"))
+	rperf = vect(iosizes, os.path.join(SRESULT_DIR, "reads"))
 
-	print perf
+	print wperf
+	print rperf
 	#TODO different lines.. how label
-	plot.plot(iosizes, perf, label='Writes')
+	plot.plot(iosizes, wperf, label='Writes')
+	plot.plot(iosizes, rperf, label='Reads')
 	plot.xlabel('IO Size (bytes)')
 	plot.ylabel('Average Latency (us)')
 	plot.title('Performance over IO sizes')
 
+	plot.legend()
 	plot.savefig('perf_iosizes.png')
 
 
@@ -90,7 +99,7 @@ def graph_indexrebuild():
 
 
 	stor_sz = []
-	rebuildtime = 
+	rebuildtime = 0
 
 	plot.plot(stor_sz, rebuildtime)
 	plot.xlabel()
@@ -105,23 +114,33 @@ def graph_tpoh():
 
 def graph_batch():
 	
-	res_fio= [20, 21, 22, 23]
-	res_nodelay= [10, 11, 12, 13]
-	res_delay = (30, 31, 32, 33)
+	vect = np.vectorize(getbatchdata)
+	res_delay = vect(BT_SZS, BRESULT_DIR)
+	res_nodelay = vect(BT_SZS, NODELAYDIR)
+	res_fio = getfiodata('fio_res.ix')
+
+
+	#print res_delay
+	#print res_nodelay
+	#print res_fio
 
 	ind = np.arange(1,5)
-	width = 0.25       # the width of the bars
+	width = 0.25
 
 	fig, ax = plot.subplots()
-	rects1 = ax.bar(ind, res_nodelay, width, color='r')
+	rects1 = ax.bar(ind, res_delay, width, color='r')
 	rects2 = ax.bar(ind + width, res_fio, width, color='y')
-	rects3 = ax.bar(ind + 2*width, res_delay, width, color='g')
+	rects3 = ax.bar(ind + 2*width, res_nodelay, width, color='g')
 
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('IOPS')
+	ax.set_xlabel('Batch size (# requests)')
 	ax.set_title('IOPS or smthg')
 	ax.set_xticks(ind + width * 3/2)
-	ax.set_xticklabels(('G1', 'G2', 'G3', 'G4'))
+	ax.set_xticklabels(BT_SZS) #TODO LOG SCALE
+
+	ax.legend((rects1[0], rects2[0], rects3[0]), ('IX with delay', 'fio on ramdisk', 'IX w/o delay'), loc='upper left')
+
 
 	plot.savefig('sampleiops.png')
 
@@ -135,6 +154,7 @@ if __name__=="__main__":
 		darr = np.loadtxt(f, delimiter='', usecols = (), ndmin=0)
 	"""
 
+	graph_iosizes(IO_SZS)
 	graph_batch()
 
 	'''

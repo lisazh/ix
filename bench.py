@@ -1,6 +1,6 @@
 """
 """
-
+import re
 import sys
 import os
 import signal
@@ -58,7 +58,7 @@ def mv_results(whichdir, pref=""):
         		os.rename(os.path.join(cwd, f), os.path.join(resultdir, f))	
 
 
-def runner(mode, batchsz, itern, iosize, outfname='out.ix'):
+def runner(mode, batchsz, itern, iosize, killat=0, outfname='out.ix'):
 
 	cwd = os.getcwd()
 
@@ -79,6 +79,9 @@ def runner(mode, batchsz, itern, iosize, outfname='out.ix'):
 	for i in range(TRIES):
 		if mfile.find('clean up complete') == -1:
 			time.sleep(wait)
+		elif killat:
+			if mfile.find("put finished for key {}".format(killat)):
+				break #jump to kill..
 		else: 
 			print 'benchmark completed\n'
 			break
@@ -105,12 +108,27 @@ def runner(mode, batchsz, itern, iosize, outfname='out.ix'):
 
 def benchmark_index():
 
+	ret = []
+	rg = re.compile('(?:DEBUG: index building took )\d+(?= milliseconds)')
+
 	#technically should clean out "device" between runs..whatever
 	for s in STOR_SZS:
+		outname = "out_{}.ix".format(s)
 		runner(1, 1, s, DEF_STORSZ)
-		runner(0, 1, 1, DEF_IOSZ) #dummy read call
-		#grep out.ix for deets
+		runner(0, 1, 1, DEF_IOSZ, outfname=outname) #dummy read call
+		
+
+		f = open(outname, 'r')
+		for line in f:
+			if rg.match(line):
+				ret.append(int(re.search('\d+(?= milliseconds', line).group()))
+
+
+	print "Times for index building were {0} for indexes of sizes {1}".format(ret, STOR_SZS)				
 		#write to a new file...
+
+
+
 
 
 def benchmark_batches(mode):
