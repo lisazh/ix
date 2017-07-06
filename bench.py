@@ -19,8 +19,8 @@ MODES = [0, 1, 2]  # ordering is to ensure writes go before reads..
 STRMODES = ['r', 'w', 'rw']
 IO_SZS = [100, 250, 500, 1000, 2500, 5000]
 BT_SZS = [10, 100, 1000, 10000]
-STOR_SZS = [1000, 10000, 100000]
-DEF_ITER = 100
+STOR_SZS = [1000, 5000, 10000, 50000, 100000]
+DEF_ITER = 1000
 DEF_IOSZ = 384
 DEF_STORSZ = 512
 
@@ -47,8 +47,10 @@ def mv_results(whichdir, pref=""):
 	if not os.path.exists(topdir):
 		os.mkdir(topdir)
 	
+	if pref:
+		pref+= '_'
 	if whichdir == BRESULT_DIR:
-		resultdir = os.path.join(topdir, pref + datetime.now().strftime("%d%m%y_%H%M"))
+		resultdir = os.path.join(topdir, pref + datetime.now().strftime("%d%m%y_%H%M%S"))
 		os.mkdir(resultdir)	
 	else:
 		resultdir = topdir
@@ -121,7 +123,7 @@ def benchmark_index():
 		f = open(outname, 'r')
 		for line in f:
 			if rg.match(line):
-				ret.append(int(re.search('\d+(?= milliseconds', line).group()))
+				ret.append(int(re.search('\d+(?= milliseconds)', line).group()))
 
 
 	print "Times for index building were {0} for indexes of sizes {1}".format(ret, STOR_SZS)				
@@ -158,11 +160,12 @@ def run_benchmarks(m):
 	#benchmark_batches(m)
 
 def main():
+	benchmark_index()
 	#benchmark_singles()
 
 	#writes before reads..
-	benchmark_batches(MODES[1]) 
-	benchmark_batches(MODES[0])
+	#benchmark_batches(MODES[1]) 
+	#benchmark_batches(MODES[0])
 
 if __name__=="__main__":
 	main()
