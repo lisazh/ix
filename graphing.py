@@ -73,40 +73,55 @@ def getdatal(sz, dirname):
 				print "Matched file {0} for io size {1}".format(fname, sz)
 				return getavg(os.path.join(fullpath, fname))
 
+def getindexdata():
+
+	rg = re.compile('(?:DEBUG: index building took )\d+(?= milliseconds)')
 
 
 
-def graph_iosizes(iosizes):
+def graph_iosizes():
 
 	vect = np.vectorize(getdatal)
-	wperf = vect(iosizes, os.path.join(SRESULT_DIR, "writes"))
-	rperf = vect(iosizes, os.path.join(SRESULT_DIR, "reads"))
+	writedir = os.path.join(SRESULT_DIR, "writes")
+	readsdir = os.path.join(SRESULT_DIR, "reads")
+	wperf = vect(IO_SZS, writedir)
+	rperf = vect(IO_SZS, readsdir)
+
+	bwperf = vect(IO_BSZS, writedir)
+	brperf = vect(IO_BSZS, readsdir)
 
 	print wperf
 	print rperf
 	#TODO different lines.. how label
-	plot.plot(iosizes, wperf, label='Writes')
-	plot.plot(iosizes, rperf, label='Reads')
+	#plot.plot(IO_SZS, wperf, 'bo')
+	#plot.plot(IO_SZS, wperf, 'b', label='Writes')
+	#plot.plot(IO_SZS, rperf, 'go')
+	#plot.plot(IO_SZS, rperf, 'g', label='Reads')
+	plot.plot(IO_BSZS, bwperf, 'yo')
+	plot.plot(IO_BSZS, bwperf, 'y', label="Writes (binary)")
+	plot.plot(IO_BSZS, brperf, 'ro')
+	plot.plot(IO_BSZS, brperf, 'r', label="Reads (binary sizes)")
+
 	plot.xlabel('IO Size (bytes)')
 	plot.ylabel('Average Latency (us)')
 	plot.title('Performance over IO sizes')
 
-	plot.legend()
+	plot.legend(loc='upper left')
 	plot.savefig('perf_iosizes.png')
 
 
 def graph_indexrebuild():
 
+	rebuildtime = [652.0, 646.0, 664.0, 656.0, 651.0, 669.0, 716.0, 749.0, 801.0] 
+	#rebuildtime = [866.0, 861.0, 858.0, 867.0, 860.0, 892.0, 875.0, 865.0, 861.0]
 
-	stor_sz = []
-	rebuildtime = 0
+	plot.plot(STOR_SZS, rebuildtime)
+	plot.plot(STOR_SZS, rebuildtime, 'bo')
+	plot.xlabel("Index size (number of 512B entries)")
+	plot.ylabel("Time (milliseconds)")
+	plot.title("Index rebuilding")
 
-	plot.plot(stor_sz, rebuildtime)
-	plot.xlabel()
-	plot.ylabel()
-	plot.title()
-
-	plot.savefig('.png')
+	plot.savefig('indexrebuild.png')
 
 
 def graph_tpoh():
@@ -154,8 +169,9 @@ if __name__=="__main__":
 		darr = np.loadtxt(f, delimiter='', usecols = (), ndmin=0)
 	"""
 
-	graph_iosizes(IO_SZS)
+	graph_iosizes()
 	graph_batch()
+	#graph_indexrebuild()
 
 	'''
 	iosizes = [100, 500, 1000]

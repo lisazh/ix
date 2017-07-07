@@ -18,7 +18,7 @@ import numpy as np ##TODO find module
 MODES = [0, 1, 2]  # ordering is to ensure writes go before reads..
 STRMODES = ['r', 'w', 'rw']
 IO_SZS = [100, 250, 500, 750, 1000, 2500, 5000]
-IO_BSZS = [128, 256, 512, 1024, 2048, 4096]
+IO_BSZS = [128, 256, 512, 768, 1024, 1280, 1536, 1796, 2048, 4096]
 BT_SZS = [10, 100, 1000, 10000]
 STOR_SZS = [1000, 2500, 5000, 7500, 10000, 25000, 50000, 75000, 100000]
 DEF_ITER = 1000
@@ -28,6 +28,10 @@ DEF_STORSZ = 512
 #LOGISTICS
 SRESULT_DIR = "resultsingle"
 BRESULT_DIR = "resultsbatch"
+IRESULT_DIR = "resultsindex"
+DIRS = [SRESULT_DIR, BRESULT_DIR, IRESULT_DIR]
+ALL_DIR = 'results_allbenchmarks'
+
 IX_CMD = 'dp/ix'
 BENCH_CMD = 'apps/iobench'
 
@@ -53,19 +57,39 @@ def mv_results(whichdir, pref=""):
 	if whichdir == BRESULT_DIR:
 		resultdir = os.path.join(topdir, pref + datetime.now().strftime("%d%m%y_%H%M%S"))
 		os.mkdir(resultdir)	
-	else:
-		resultdir = topdir
-
-	for f in os.listdir('.'):
+		
+		for f in os.listdir('.'):
     		if fnmatch.fnmatch(f, 'results_*.ix'):
         		os.rename(os.path.join(cwd, f), os.path.join(resultdir, f))	
 
+	elif whichdir == SRESULT_DIR:
+		wresultdir = os.path.join(topdir, 'writes')
+		rresultdir = os.path.join(topdir, 'reads')
+		if not os.path.exists(wresultdir):
+			os.mkdir(wresultdir)
+		if not os.path.exists(rresultdir):
+			os.mkdir(rresultdir)
 
-def runner(mode, batchsz, itern, iosize, killat=0, outfname='out.ix'):
+		for f in os.listdir('.'):
+			if fnmatch.fnmatch(f, 'results_w_*.ix'):
+				os.rename(os.path.join(cwd, f), os.path.join(wresultdir, f))
+			elif fnmatch.fnmatch(f, 'results_r_*.ix'):
+				os.rename(os.path.join(cwd,f), os.path.join(rresultdir,f))	
+
+	elif whichdir = IRESULT_DIR:
+		for f in os.listdir('.'):
+			if fnmatch.fnmatch(f, 'out_*.ix'):
+				os.rename(os.path.join(cwd,f), os.path.join(resultdir))
+
+
+
+
+def runner(mode, batchsz, itern, iosize, killat=0, outfname='out.ix', apnd=False):
 
 	cwd = os.getcwd()
 
-	outfile = open(outfname, 'w+')
+	fmode = 'a' if apnd else 'w+'
+	outfile = open(outfname, mode)
 	proc = subprocess.Popen(
 		['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, str(mode), str(batchsz), str(itern), str(iosize)], \
 		stdout=outfile)
@@ -114,30 +138,20 @@ def runner(mode, batchsz, itern, iosize, killat=0, outfname='out.ix'):
 
 def benchmark_index():
 
-	ret = []
-	rg = re.compile('(?:DEBUG: index building took )\d+(?= milliseconds)')
+	#ret = []
 
-	ntimes = random.randint(1, 10)
+	#ntimes = random.randint(1, 10)
+	ntimes = 5
 	#technically should clean out "device" between runs..whatever
 	for s in STOR_SZS:
-		outname = "out_{}.ix".format(s)
 		runner(1, 1, s, DEF_IOSZ)
 		for i in range(ntimes):
-			tmp = []
-			runner(0, 1, 1, DEF_IOSZ, outfname=outname) #dummy read call
-		
-
-			f = open(outname, 'r')
-			for line in f:
-				if rg.match(line):
-					tmp.append(int(re.search('\d+(?= milliseconds)', line).group()))
-		ret.append(np.mean(tmp))	
-	print "Average times for index building were {0} over {2} runs for indexes of sizes {1}".format(ret, STOR_SZS, ntimes)				
+			outname = "out_{0}.ix".format(s)
+			runner(0, 1, 1, DEF_IOSZ, outfname=outname, apnd=True) #dummy read call
+	#print "Average times for index building were {0} over {2} runs for indexes of sizes {1}".format(ret, STOR_SZS, ntimes)				
 		#write to a new file...
 
-
-
-
+	mv_results()
 
 def benchmark_batches(mode):
 
@@ -160,19 +174,23 @@ def benchmark_singles():
 		runner(MODES[0], 1, DEF_ITER, barg)
 	mv_results(SRESULT_DIR)
 
-		
-def run_benchmarks(m):
-	pass
-	#benchmark_singles(m)
-	#benchmark_batches(m)
+
+def collect_results():
+
+	cwd = os.getcwd()
+	for d in DIRS:
+		os.rename(os.path.join(cwd, d), os.path.join(cwd, ALL_DIR, d))
 
 def main():
-	#benchmark_index()
 	benchmark_singles()
 
 	#writes before reads..
-	#benchmark_batches(MODES[1]) 
-	#benchmark_batches(MODES[0])
+	benchmark_batches(MODES[1]) 
+	benchmark_batches(MODES[0])
+
+	benchmark_index()
+
+	collect_results()
 
 if __name__=="__main__":
 	main()
