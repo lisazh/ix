@@ -59,9 +59,8 @@ def mv_results(whichdir, pref=""):
 		os.mkdir(resultdir)	
 		
 		for f in os.listdir('.'):
-    		if fnmatch.fnmatch(f, 'results_*.ix'):
-        		os.rename(os.path.join(cwd, f), os.path.join(resultdir, f))	
-
+	    		if fnmatch.fnmatch(f, 'results_*.ix'):
+        			os.rename(os.path.join(cwd, f), os.path.join(resultdir, f))	
 	elif whichdir == SRESULT_DIR:
 		wresultdir = os.path.join(topdir, 'writes')
 		rresultdir = os.path.join(topdir, 'reads')
@@ -76,7 +75,7 @@ def mv_results(whichdir, pref=""):
 			elif fnmatch.fnmatch(f, 'results_r_*.ix'):
 				os.rename(os.path.join(cwd,f), os.path.join(rresultdir,f))	
 
-	elif whichdir = IRESULT_DIR:
+	elif whichdir == IRESULT_DIR:
 		for f in os.listdir('.'):
 			if fnmatch.fnmatch(f, 'out_*.ix'):
 				os.rename(os.path.join(cwd,f), os.path.join(resultdir))
@@ -89,7 +88,7 @@ def runner(mode, batchsz, itern, iosize, killat=0, outfname='out.ix', apnd=False
 	cwd = os.getcwd()
 
 	fmode = 'a' if apnd else 'w+'
-	outfile = open(outfname, mode)
+	outfile = open(outfname, fmode)
 	proc = subprocess.Popen(
 		['sudo', cwd + '/' +  IX_CMD, '--', cwd + '/' + BENCH_CMD, str(mode), str(batchsz), str(itern), str(iosize)], \
 		stdout=outfile)
@@ -138,19 +137,26 @@ def runner(mode, batchsz, itern, iosize, killat=0, outfname='out.ix', apnd=False
 
 def benchmark_index():
 
-	#ret = []
-
+	rg = re.compile('(?:DEBUG: index building took )\d+(?= milliseconds)')	
 	#ntimes = random.randint(1, 10)
 	ntimes = 5
 	#technically should clean out "device" between runs..whatever
 	for s in STOR_SZS:
 		runner(1, 1, s, DEF_IOSZ)
+		fout = open("out_{0}.ix".format(s), "w")
 		for i in range(ntimes):
-			outname = "out_{0}.ix".format(s)
-			runner(0, 1, 1, DEF_IOSZ, outfname=outname, apnd=True) #dummy read call
+			outname = "out_{0}_{!}.ix".format(s,i)
+			runner(0, 1, 1, DEF_IOSZ, outfname=outname) #dummy read call
 	#print "Average times for index building were {0} over {2} runs for indexes of sizes {1}".format(ret, STOR_SZS, ntimes)				
 		#write to a new file...
-
+			
+			f = open(outname, 'r')
+			for line in f:
+				if rg.match(line); #copy result line over
+					fout.write(line)		
+			f.close()	
+		fout.close()
+			
 	mv_results()
 
 def benchmark_batches(mode):
