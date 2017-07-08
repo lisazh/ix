@@ -147,17 +147,17 @@ def graph_iosizes():
 	ax.plot(IO_BSZS, bwperf_nn, 'y.')
 	ax.plot(IO_BSZS, bwperf_nn, 'y', linestyle="--", label="Writes (99th)")
 
-	ax.plot(IO_BSZS, brperf_avg, 'b.')
-	ax.plot(IO_BSZS, brperf_avg, 'b', linestyle="-", label="Reads (average)")
-	ax.plot(IO_BSZS, brperf_nn, 'b.')
-	ax.plot(IO_BSZS, brperf_nn, 'b', linestyle="--", label="Reads (99th)")
+	ax.plot(IO_BSZS, brperf_avg, 'g.')
+	ax.plot(IO_BSZS, brperf_avg, 'g', linestyle="-", label="Reads (average)")
+	ax.plot(IO_BSZS, brperf_nn, 'g.')
+	ax.plot(IO_BSZS, brperf_nn, 'g', linestyle="--", label="Reads (99th)")
 
 	ax.set_xlabel('IO Size (bytes)')
-	ax.set_ylabel('Latency (us)')
+	ax.set_ylabel('\"Latency\" (us)')
 	ax.set_title('Performance over IO sizes')
 
 	ax.legend(loc='upper left')
-	plot.savefig('perf_iosizes.png')
+	plot.savefig('overhead.png')
 
 
 def graph_indexrebuild():
@@ -173,7 +173,7 @@ def graph_indexrebuild():
 
 	ax.plot(STOR_SZS, rebuildtime)
 	ax.plot(STOR_SZS, rebuildtime, 'bo')
-	ax.set_xlabel("Index size (number of 512B entries)")
+	ax.set_xlabel("Index size (number of 640B entries)")
 	ax.set_ylabel("Time (milliseconds)")
 	ax.set_title("Index rebuilding")
 
@@ -218,7 +218,7 @@ def graph_rbatch():
 	
 	vect = np.vectorize(rgetbatchdata)
 	res_delay = vect(BT_SZS, BRESULT_DIR)
-	res_nodelay = vect(BT_SZS, NODELAYDIR)
+	#res_nodelay = vect(BT_SZS, NODELAYDIR)
 	res_fio = getfiodata('rfio_res.ix')
 
 
@@ -230,15 +230,15 @@ def graph_rbatch():
 	width = 0.25
 
 	fig, ax = plot.subplots()
-	rects1 = ax.bar(ind, res_delay, width, color='r')
+	rects1 = ax.bar(ind, res_nodelay, width, color='g')
 	rects2 = ax.bar(ind + width, res_fio, width, color='y')
-	rects3 = ax.bar(ind + 2*width, res_nodelay, width, color='g')
+	#rects3 = ax.bar(ind + 2*width, , width, color='g')
 
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('IOPS')
 	ax.set_xlabel('Batch size (# requests)')
 	ax.set_title('Read IOPS')
-	ax.set_xticks(ind + width * 3/2)
+	ax.set_xticks(ind + width * 2)
 	ax.set_xticklabels(BT_SZS) #TODO LOG SCALE
 
 	ax.legend((rects1[0], rects2[0], rects3[0]), ('IX with delay', 'fio on ramdisk', 'IX w/o delay'), loc='upper left')

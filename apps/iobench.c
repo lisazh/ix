@@ -40,7 +40,7 @@ uint64_t curr_iter = 0;
 uint64_t resp_iter = 0; //
 
 //input params -- default values for all
-uint8_t iotype;
+uint8_t iotype = WRITE_ONLY;
 int batchsize = 1;
 int io_size = DEF_IO_SIZE; //writes only
 char *fname = "keys.ix";
@@ -296,43 +296,49 @@ static void ro_get_handler(char *key, void *data, size_t datalen){
 // callback for ixev_put in WRITE_ONLY workloads
 static void wo_put_handler(char *key, void *val){
 	
-	printf("DEBUG: put finished for key %s at %p\n", key, key);
-	resp_iter++;
-	end_timer(key);
-	if (curr_iter < max_iter){
-		int i = curr_iter++; 
-		//printf("DEBUG: issuing put for index %d, curr_iter is %d\n", i, curr_iter);
-		ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
-		//printf("DEBUG: about to start timer for key %s..\n", keys[i]);
-		start_timer(keys[i]);
-	} else if (resp_iter >= max_iter){
-		
-		//printf("DEBUG: end reached on callback for key %s\n", key);
-		if (gettimeofday(&glob_timer2, NULL)){
-			fprintf(stderr, "Timer issue\n");
-			exit(1);
+	if (strncmp(key, "warmup", strlen(key)) == 0){
+		start_workload();
+	} else {
+		printf("DEBUG: put finished for key %s at %p\n", key, key);
+		resp_iter++;
+		end_timer(key);
+		if (curr_iter < max_iter){
+			int i = curr_iter++; 
+			//printf("DEBUG: issuing put for index %d, curr_iter is %d\n", i, curr_iter);
+			ixev_put(keys[i], (void *)(iobuf + ((i % batchsize)*io_size)) , io_size);
+			//printf("DEBUG: about to start timer for key %s..\n", keys[i]);
+			start_timer(keys[i]);
+		} else if (resp_iter >= max_iter){
+			
+			//printf("DEBUG: end reached on callback for key %s\n", key);
+			if (gettimeofday(&glob_timer2, NULL)){
+				fprintf(stderr, "Timer issue\n");
+				exit(1);
+			}
+			cleanup();
+			exit(0);
 		}
-		cleanup();
-		exit(0);
 	}
-
 }
 
 static void rw_get_handler(char *key, void *data, size_t datalen){
 
-	ixev_get_done(data);
-	resp_iter++;
-	end_timer(key);
-	if (curr_iter < max_iter){
-		int i = curr_iter++;
-		ixev_put(keys[i], (void *)(iobuf + (rand() % io_size)), io_size); //pick a random offset within random data to write..
-		start_timer(keys[i]);
-	} else if (resp_iter >= max_iter){
-		cleanup();
-		exit(0);
+	if (strncmp(key, "warmup", strlen(key)) == 0){
+		start_workload();
+	} else {
+		ixev_get_done(data);
+		resp_iter++;
+		end_timer(key);
+		if (curr_iter < max_iter){
+			int i = curr_iter++;
+			ixev_put(keys[i], (void *)(iobuf + (rand() % io_size)), io_size); //pick a random offset within random data to write..
+			start_timer(keys[i]);
+		} else if (resp_iter >= max_iter){
+			cleanup();
+			exit(0);
+		}
+
 	}
-
-
 }
 
 static void rw_put_handler(char *key, void *val){
@@ -372,11 +378,18 @@ void start_workload(){
 		//generate_data(batchsize*io_size, iobuf);
 	}
 
+}
+
+// issue a first dummy request..
+void warmup(){
+
+	printf("DEBUG: warming up with dummy write\n");
+	ixev_put("warmup", "test", 4);
+
 	while(1)
 		ixev_wait();
 
 }
-
 
 int main(int argc, char *argv[]){
 	
@@ -420,6 +433,7 @@ int main(int argc, char *argv[]){
 		exit(ret);
 	}
 
-	start_workload();
+	//start_workload();
+	warmup();
 
 }
