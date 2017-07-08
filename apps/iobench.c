@@ -299,7 +299,7 @@ static void wo_put_handler(char *key, void *val){
 	if (strncmp(key, "warmup", strlen(key)) == 0){
 		start_workload();
 	} else {
-		printf("DEBUG: put finished for key %s at %p\n", key, key);
+		//printf("DEBUG: put finished for key %s at %p\n", key, key);
 		resp_iter++;
 		end_timer(key);
 		if (curr_iter < max_iter){

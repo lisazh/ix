@@ -76,6 +76,7 @@ def mv_results(whichdir, pref=""):
 				os.rename(os.path.join(cwd,f), os.path.join(rresultdir,f))	
 
 	elif whichdir == IRESULT_DIR:
+		resultdir = topdir
 		for f in os.listdir('.'):
 			if fnmatch.fnmatch(f, 'out_*.ix'):
 				os.rename(os.path.join(cwd,f), os.path.join(resultdir))
@@ -145,36 +146,38 @@ def benchmark_index():
 		runner(1, 1, s, DEF_IOSZ)
 		fout = open("out_{0}.ix".format(s), "w")
 		for i in range(ntimes):
-			outname = "out_{0}_{!}.ix".format(s,i)
+			outname = "out_{0}_{1}.ix".format(s,i)
 			runner(0, 1, 1, DEF_IOSZ, outfname=outname) #dummy read call
 	#print "Average times for index building were {0} over {2} runs for indexes of sizes {1}".format(ret, STOR_SZS, ntimes)				
 		#write to a new file...
 			
 			f = open(outname, 'r')
 			for line in f:
-				if rg.match(line); #copy result line over
+				if rg.match(line): #copy result line over
 					fout.write(line)		
-			f.close()	
+			f.close()
+			os.remove(os.path.join(os.getcwd(), outname))	
+		
 		fout.close()
 			
-	mv_results()
+	mv_results(IRESULT_DIR)
 
 def benchmark_batches(mode):
 
-	ntimes = random.randint(1, 10)
+	ntimes = random.randint(5, 10)
 	print "Running benchmark in mode {0} for {1} iterations".format(mode, ntimes)
 
 	for i in range(ntimes):
 		for arg in BT_SZS:
-			runner(mode, arg, 1, DEF_IOSZ)
-			mv_results(BRESULT_DIR, STRMODES[mode])
+			runner(mode, arg, 1, DEF_IOSZ) #run twice to 
+		mv_results(BRESULT_DIR, STRMODES[mode])
 
 
 def benchmark_singles():
-	for arg in IO_SZS:
+	#for arg in IO_SZS:
 		#Run writes and then immediately followed by read (b/c read depends on existing written IO size)
-		runner(MODES[1], 1, DEF_ITER, arg) 
-		runner(MODES[0], 1, DEF_ITER, arg)
+		#runner(MODES[1], 1, DEF_ITER, arg) 
+		#runner(MODES[0], 1, DEF_ITER, arg)
 	for barg in IO_BSZS:
 		runner(MODES[1], 1, DEF_ITER, barg)
 		runner(MODES[0], 1, DEF_ITER, barg)
@@ -184,8 +187,11 @@ def benchmark_singles():
 def collect_results():
 
 	cwd = os.getcwd()
+	adir = os.path.join(cwd, ALL_DIR)
+	if not os.path.exists(adir):
+		os.mkdir(adir)
 	for d in DIRS:
-		os.rename(os.path.join(cwd, d), os.path.join(cwd, ALL_DIR, d))
+		os.rename(os.path.join(cwd, d), os.path.join(adir, d))
 
 def main():
 	benchmark_singles()
@@ -194,7 +200,7 @@ def main():
 	benchmark_batches(MODES[1]) 
 	benchmark_batches(MODES[0])
 
-	benchmark_index()
+	#benchmark_index()
 
 	collect_results()
 
