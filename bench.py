@@ -18,6 +18,7 @@ import numpy as np ##TODO find module
 MODES = [0, 1, 2]  # ordering is to ensure writes go before reads..
 STRMODES = ['r', 'w', 'rw']
 IO_SZS = [100, 250, 500, 750, 1000, 2500, 5000]
+IO_DSZS = [100, 250, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 3000, 3250, 3500, 3750, 4000]
 IO_BSZS = [128, 256, 512, 768, 1024, 1280, 1536, 1796, 2048, 4096]
 BT_SZS = [10, 100, 1000, 10000]
 STOR_SZS = [1000, 2500, 5000, 7500, 10000, 25000, 50000, 75000, 100000]
@@ -178,9 +179,13 @@ def benchmark_singles():
 		#Run writes and then immediately followed by read (b/c read depends on existing written IO size)
 		#runner(MODES[1], 1, DEF_ITER, arg) 
 		#runner(MODES[0], 1, DEF_ITER, arg)
-	for barg in IO_BSZS:
-		runner(MODES[1], 1, DEF_ITER, barg)
-		runner(MODES[0], 1, DEF_ITER, barg)
+	#for barg in IO_BSZS:
+		#runner(MODES[1], 1, DEF_ITER, barg)
+		#runner(MODES[0], 1, DEF_ITER, barg)
+	for darg in IO_DSZS:
+		runner(MODES[1], 1, DEF_ITER, darg)
+		if darg <= 2000:
+			runner(MODES[0], 1, DEF_ITER, darg)
 	mv_results(SRESULT_DIR)
 
 
@@ -197,12 +202,12 @@ def main():
 	benchmark_singles()
 
 	#writes before reads..
-	benchmark_batches(MODES[1]) 
-	benchmark_batches(MODES[0])
+	#benchmark_batches(MODES[1]) 
+	#benchmark_batches(MODES[0])
 
 	#benchmark_index()
 
-	collect_results()
+	#collect_results()
 
 if __name__=="__main__":
 	main()
